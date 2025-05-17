@@ -13,8 +13,8 @@ import { LoginUserDto } from './dto/login.dto';
 import { User } from './entities/auth.entity';
 import { UserRoleGuard } from './guards/user-role.guard';
 import { ValidRoles } from './interfaces/valid-roles';
-import { Funcionalidad } from './decorators/funcionalidad.decorator';
-import { FuncionalidadGuard } from './guards/funcionalidad.guard';
+import { FuncionalidadAuth } from './decorators/funcionalidad-auth.decorator';
+
 
 @Controller('auth')
 export class AuthController {
@@ -91,8 +91,7 @@ export class AuthController {
   }
 
   @Get('prueba')
-  @Funcionalidad('prueba')
-  @UseGuards(FuncionalidadGuard)
+  @FuncionalidadAuth('prueba')
   prueba(){
     return 'ok'
   }

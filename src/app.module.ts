@@ -7,6 +7,8 @@ import { join } from 'path';
 import { DiagramWsModule } from './diagram-ws/diagram-ws.module';
 import { RolModule } from './rol/rol.module';
 import { FuncionalidadModule } from './funcionalidad/funcionalidad.module';
+import { ProductoModule } from './producto/producto.module';
+import { CategoriaModule } from './categoria/categoria.module';
 
 
 
@@ -32,7 +34,9 @@ import { FuncionalidadModule } from './funcionalidad/funcionalidad.module';
     }),
     AuthModule,
     RolModule,
-    FuncionalidadModule
+    FuncionalidadModule,
+    ProductoModule,
+    CategoriaModule
     
   ],
   providers: [],

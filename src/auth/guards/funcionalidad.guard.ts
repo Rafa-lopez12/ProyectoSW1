@@ -17,7 +17,6 @@ export class FuncionalidadGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user as User; // Usuario autenticado
 
-    console.log(user)
 
     if (!user) return false;
 
@@ -31,6 +30,7 @@ export class FuncionalidadGuard implements CanActivate {
       where: { id: user.id },
       relations: ['rol', 'rol.funcionalidades'],
     });
+
 
     if (!usuario) return false;
 
