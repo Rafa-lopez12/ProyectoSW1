@@ -9,6 +9,8 @@ import { RolModule } from './rol/rol.module';
 import { FuncionalidadModule } from './funcionalidad/funcionalidad.module';
 import { ProductoModule } from './producto/producto.module';
 import { CategoriaModule } from './categoria/categoria.module';
+import { ProveedorModule } from './proveedor/proveedor.module';
+import { MovimientoInvModule } from './movimiento_inv/movimiento_inv.module';
 
 
 
@@ -36,7 +38,9 @@ import { CategoriaModule } from './categoria/categoria.module';
     RolModule,
     FuncionalidadModule,
     ProductoModule,
-    CategoriaModule
+    CategoriaModule,
+    ProveedorModule,
+    MovimientoInvModule
     
   ],
   providers: [],

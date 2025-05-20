@@ -29,7 +29,6 @@ import {
     @JoinColumn({ name: 'productId' })
     producto: Producto;
 
-    
   
     // @ManyToOne(() => Size, (size) => size.productSizes, { eager: true })
     // @JoinColumn({ name: 'sizeId' })
