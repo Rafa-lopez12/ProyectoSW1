@@ -1,5 +1,6 @@
 // src/cliente/entities/cliente.entity.ts
-import { BeforeInsert, BeforeUpdate, Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Tenant } from '../../tenant/entities/tenant.entity';
+import { BeforeInsert, BeforeUpdate, Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity('clientes')
 export class Cliente {
@@ -33,6 +34,13 @@ export class Cliente {
         default: true
     })
     isActive: boolean;
+
+    @Column()
+    tenantId: string;
+  
+    @ManyToOne(() => Tenant)
+    @JoinColumn({ name: 'tenantId' })
+    tenant: Tenant;  
 
 
     // Campo virtual para nombre completo

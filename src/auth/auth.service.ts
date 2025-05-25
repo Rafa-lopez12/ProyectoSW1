@@ -10,10 +10,11 @@ import { CreateUserDto } from './dto/create-auth.dto';
 import { LoginUserDto } from './dto/login.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { Rol } from 'src/rol/entities/rol.entity';
+import { TenantBaseService } from 'src/common/services/tenant-base.service';
 
 
 @Injectable()
-export class AuthService {
+export class AuthService extends TenantBaseService<User> {
 
   constructor(
     @InjectRepository(User)
@@ -23,7 +24,9 @@ export class AuthService {
     private readonly rolRepository: Repository<Rol>,
 
     private readonly jwtService: JwtService,
-  ) {}
+  ) {
+    super(userRepository)
+  }
 
 
   async create( createUserDto: CreateUserDto) {

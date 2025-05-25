@@ -2,6 +2,7 @@ import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany, JoinColum
 import { User } from '../../auth/entities/auth.entity';
 import { Cliente } from '../../cliente/entities/cliente.entity';
 import { DetalleVenta } from './detalleVenta.entity';
+import { Tenant } from '../../tenant/entities/tenant.entity';
 
 @Entity('ventas')
 export class Venta {
@@ -27,6 +28,13 @@ export class Venta {
 
   @Column('text', { default: 'completada' })
   estado: string; // completada, cancelada, pendiente
+
+  @Column()
+  tenantId: string;
+  
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenantId' })
+  tenant: Tenant;
 
   @Column('text', { nullable: true })
   observaciones: string;

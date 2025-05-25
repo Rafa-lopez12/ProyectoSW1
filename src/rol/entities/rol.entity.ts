@@ -1,6 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToMany, JoinTable, OneToMany } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, ManyToMany, JoinTable, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
 import { Funcionalidad } from '../../funcionalidad/entities/funcionalidad.entity';
 import { User } from '../../auth/entities/auth.entity';
+import { Tenant } from '../../tenant/entities/tenant.entity';
 
 @Entity('rol')
 export class Rol {
@@ -9,6 +10,13 @@ export class Rol {
 
   @Column({ unique: true })
   nombre: string;
+
+  @Column()
+  tenantId: string;
+  
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenantId' })
+  tenant: Tenant;
 
   @OneToMany(() => User, (user) => user.rol)
   user: User;

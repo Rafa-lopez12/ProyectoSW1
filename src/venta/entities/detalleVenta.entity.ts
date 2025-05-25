@@ -1,6 +1,7 @@
 import { Entity, ManyToOne, JoinColumn, Column, PrimaryColumn } from 'typeorm';
 import { Venta } from './venta.entity'; 
 import { ProductoVariedad } from '../../producto/entities/productoVariedad.entity';
+import { Tenant } from '../../tenant/entities/tenant.entity';
 
 @Entity('detalle_venta')
 export class DetalleVenta {
@@ -13,6 +14,13 @@ export class DetalleVenta {
   @ManyToOne(() => Venta, venta => venta.detalles, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'ventaId' })
   venta: Venta;
+
+  @Column()
+  tenantId: string;
+  
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenantId' })
+  tenant: Tenant;
 
   @ManyToOne(() => ProductoVariedad, { eager: true })
   @JoinColumn({ name: 'productoVariedadId' })

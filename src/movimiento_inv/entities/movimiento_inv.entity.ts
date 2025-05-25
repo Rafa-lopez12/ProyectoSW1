@@ -2,6 +2,7 @@ import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany, JoinColum
 import { User } from '../../auth/entities/auth.entity';
 import { Proveedor } from '../../proveedor/entities/proveedor.entity';
 import { DetalleMov } from './detalle_mov_inv.entity';
+import { Tenant } from '../../tenant/entities/tenant.entity';
 
 @Entity('movimiento_inventario')
 export class MovimientoInv {
@@ -15,6 +16,13 @@ export class MovimientoInv {
   @ManyToOne(() => Proveedor, { eager: true })
   @JoinColumn({ name: 'proveedor_id' })
   proveedor: Proveedor;
+  
+  @Column()
+  tenantId: string;
+  
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenantId' })
+  tenant: Tenant;
 
 //   @ManyToOne(() => Sucursal, { eager: true })
 //   @JoinColumn({ name: 'sucursal_id' })

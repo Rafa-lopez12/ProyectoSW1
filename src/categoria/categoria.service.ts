@@ -4,31 +4,32 @@ import { UpdateCategoryDto } from './dto/update-categoria.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Categoria } from './entities/categoria.entity';
 import { Repository } from 'typeorm';
+import { TenantBaseService } from '../common/services/tenant-base.service';
 
 @Injectable()
-export class CategoriaService {
+export class CategoriaService extends TenantBaseService<Categoria> {
 
   constructor(
     @InjectRepository(Categoria)
     private readonly categoryRepository: Repository<Categoria>,
-  ){}
+  ){
+    super(categoryRepository);
+  }
 
-  async create(createCategoryDto: CreateCategoriaDto) {
+  async create(tenantId: string, createCategoryDto: CreateCategoriaDto) {
     try {
-      const category = this.categoryRepository.create(createCategoryDto);
-      return await this.categoryRepository.save(category);
+      return await this.createWithTenant(tenantId, createCategoryDto);
     } catch (error) {
       this.handleDBExceptions(error);
     }
   }
 
-  async findAll() {
-    return this.categoryRepository.find();
+  async findAll(tenantId: string) {
+    return this.findAllByTenant(tenantId);
   }
 
-  async findOne(id: string) {
-    const category = await this.categoryRepository.findOneBy({ id });
-    console.log(category)
+  async findOne(tenantId: string, id: string) {
+    const category = await this.findOneByTenant(tenantId, id);
     
     if (!category) {
       throw new NotFoundException(`Category with ID ${id} not found`);
@@ -37,7 +38,7 @@ export class CategoriaService {
     return category;
   }
 
-  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
+  async update(tenantId: string, id: string, updateCategoryDto: UpdateCategoryDto) {
     const category = await this.findOne(id);
     
     Object.assign(category, updateCategoryDto);
@@ -49,7 +50,7 @@ export class CategoriaService {
     }
   }
 
-  async remove(id: string) {
+  async remove(tenantId: string, id: string) {
     const category = await this.findOne(id);
     await this.categoryRepository.remove(category);
     

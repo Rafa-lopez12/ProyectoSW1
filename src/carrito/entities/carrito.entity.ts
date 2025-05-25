@@ -1,6 +1,7 @@
 import { Entity, ManyToOne, JoinColumn, Column, PrimaryColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Cliente } from '../../cliente/entities/cliente.entity';
 import { ProductoVariedad } from '../../producto/entities/productoVariedad.entity';
+import { Tenant } from '../../tenant/entities/tenant.entity';
 
 @Entity('carrito')
 export class Carrito {
@@ -20,6 +21,13 @@ export class Carrito {
 
   @Column('int')
   cantidad: number;
+
+  @Column()
+  tenantId: string;
+  
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenantId' })
+  tenant: Tenant;
 
 
 }

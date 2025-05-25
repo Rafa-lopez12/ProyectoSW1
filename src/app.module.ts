@@ -15,7 +15,6 @@ import { SizeModule } from './size/size.module';
 import { VentaModule } from './venta/venta.module';
 import { ClienteModule } from './cliente/cliente.module';
 import { CarritoModule } from './carrito/carrito.module';
-import { PagosModule } from './pagos/pagos.module';
 
 
 
@@ -50,7 +49,6 @@ import { PagosModule } from './pagos/pagos.module';
     VentaModule,
     ClienteModule,
     CarritoModule,
-    PagosModule
     
   ],
   providers: [],

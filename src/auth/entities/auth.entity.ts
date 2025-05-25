@@ -1,5 +1,6 @@
+import { Tenant } from '../../tenant/entities/tenant.entity';
 import { Rol } from '../../rol/entities/rol.entity';
-import { BeforeInsert, BeforeUpdate, Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { BeforeInsert, BeforeUpdate, Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 
 @Entity('users')
@@ -25,6 +26,13 @@ export class User {
         default: true
     })
     isActive: boolean;
+
+    @Column()
+    tenantId: string;
+    
+    @ManyToOne(() => Tenant)
+    @JoinColumn({ name: 'tenantId' })
+    tenant: Tenant;
 
     // @Column('text', {
     //     array: true,

@@ -7,6 +7,7 @@ import {
   } from 'typeorm';
   import { Producto } from './producto.entity';
 import { Size } from '../../size/entities/size.entity';
+import { Tenant } from 'src/tenant/entities/tenant.entity';
 
   
   @Entity('product_sizes')
@@ -26,6 +27,13 @@ import { Size } from '../../size/entities/size.entity';
     @ManyToOne(() => Producto, (product) => product.productoVariedad, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'productId' })
     producto: Producto;
+
+    @Column()
+    tenantId: string;
+    
+    @ManyToOne(() => Tenant)
+    @JoinColumn({ name: 'tenantId' })
+    tenant: Tenant;
 
     @ManyToOne(() => Size, (size) => size.productoVariedades, { eager: true })
     @JoinColumn({ name: 'sizeId' })
