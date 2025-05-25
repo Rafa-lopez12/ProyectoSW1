@@ -1,7 +1,7 @@
 import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany, JoinColumn, CreateDateColumn } from 'typeorm';
 import { User } from '../../auth/entities/auth.entity';
 import { Proveedor } from '../../proveedor/entities/proveedor.entity';
-import { DetalleMov } from './detalle-mov.entity';
+import { DetalleMov } from './detalle_mov_inv.entity';
 
 @Entity('movimiento_inventario')
 export class MovimientoInv {

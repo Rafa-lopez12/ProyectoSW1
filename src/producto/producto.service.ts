@@ -9,6 +9,7 @@ import { CategoriaService } from '../categoria/categoria.service';
 
 import { ProductoImage } from './entities/ProductoImagen.entity';
 import { ProductFilterInterface } from './interface/product-filter.interface';
+import { Size } from '../size/entities/size.entity';
 
 @Injectable()
 export class ProductoService {
@@ -23,6 +24,9 @@ export class ProductoService {
     private readonly productImageRepository: Repository<ProductoImage>,
     
     private readonly categoriesService: CategoriaService,
+
+    @InjectRepository(Size)
+    private readonly sizeRepository: Repository<Size>,
 
     private readonly dataSource: DataSource,
   ) {}
@@ -47,10 +51,16 @@ export class ProductoService {
       const productSizeEntities: ProductoVariedad[]=[]
       
       for (const sizeData of productSizes) {
+
+        const size = await this.sizeRepository.findOne({ where: { id: sizeData.size } });
+      
+        if (!size) {
+          throw new NotFoundException(`Size with ID ${sizeData.size} not found`);
+        }
         
         const productSize = this.productSizeRepository.create({
           producto: savedProduct,
-          size:sizeData.size,
+          size: size,
           color:sizeData.color,
           quantity: sizeData.quantity,
           price: sizeData.price,
@@ -175,6 +185,13 @@ export class ProductoService {
         for (const nuevaVariedad of productSizes) {
           const key = `${nuevaVariedad.size}-${nuevaVariedad.color}`;
           keysNuevasVariedades.add(key);
+
+          const size = await this.sizeRepository.findOne({ where: { id: nuevaVariedad.size } });
+      
+          if (!size) {
+            throw new NotFoundException(`Size with ID ${nuevaVariedad.size} not found`);
+          }
+          
           
           if (mapaVariedadesActuales.has(key)) {
             const variedadExistente = mapaVariedadesActuales.get(key);
@@ -185,7 +202,7 @@ export class ProductoService {
             variedadesACrear.push(
               this.productSizeRepository.create({
                 Id: id,
-                size: nuevaVariedad.size,
+                size: size,
                 color: nuevaVariedad.color,
                 quantity: nuevaVariedad.quantity,
                 price: nuevaVariedad.price,

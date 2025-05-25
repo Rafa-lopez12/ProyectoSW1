@@ -11,6 +11,11 @@ import { ProductoModule } from './producto/producto.module';
 import { CategoriaModule } from './categoria/categoria.module';
 import { ProveedorModule } from './proveedor/proveedor.module';
 import { MovimientoInvModule } from './movimiento_inv/movimiento_inv.module';
+import { SizeModule } from './size/size.module';
+import { VentaModule } from './venta/venta.module';
+import { ClienteModule } from './cliente/cliente.module';
+import { CarritoModule } from './carrito/carrito.module';
+import { PagosModule } from './pagos/pagos.module';
 
 
 
@@ -40,7 +45,12 @@ import { MovimientoInvModule } from './movimiento_inv/movimiento_inv.module';
     ProductoModule,
     CategoriaModule,
     ProveedorModule,
-    MovimientoInvModule
+    MovimientoInvModule,
+    SizeModule,
+    VentaModule,
+    ClienteModule,
+    CarritoModule,
+    PagosModule
     
   ],
   providers: [],

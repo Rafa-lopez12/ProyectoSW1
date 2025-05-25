@@ -1,19 +1,21 @@
-import { Entity, ManyToOne, JoinColumn, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, ManyToOne, JoinColumn, Column, PrimaryColumn } from 'typeorm';
 import { MovimientoInv } from './movimiento_inv.entity'; 
-import { Producto } from '../../producto/entities/producto.entity';
 import { ProductoVariedad } from '../../producto/entities/productoVariedad.entity';
 
 @Entity('detalle_movimiento')
 export class DetalleMov {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryColumn()
+  movimientoId: string;
+
+  @PrimaryColumn()
+  productoVariedadId: string;
 
   @ManyToOne(() => MovimientoInv, movimientoInv => movimientoInv.detalles, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'movimiento_id' })
+  @JoinColumn({ name: 'movimientoid' })
   movimientoInv: MovimientoInv;
 
   @ManyToOne(() => ProductoVariedad, { eager: true })
-  @JoinColumn({ name: 'producto_variedad_id' })
+  @JoinColumn({ name: 'productoVariedadId' })
   productoVariedad: ProductoVariedad;
 
   @Column('int')

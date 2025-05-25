@@ -7,7 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/auth.entity';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { Rol } from 'src/rol/entities/rol.entity';
+import { Rol } from '../rol/entities/rol.entity';
 
 @Module({
   controllers: [AuthController],

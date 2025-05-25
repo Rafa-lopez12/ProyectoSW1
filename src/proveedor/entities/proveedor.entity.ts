@@ -1,3 +1,4 @@
+import { MovimientoInv } from '../../movimiento_inv/entities/movimiento_inv.entity';
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 
 @Entity('proveedor')
