@@ -2,16 +2,13 @@ import { BadRequestException, Injectable, InternalServerErrorException, Unauthor
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-
 import * as bcrypt from 'bcrypt';
-
 import { User } from './entities/auth.entity';
 import { CreateUserDto } from './dto/create-auth.dto';
 import { LoginUserDto } from './dto/login.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { Rol } from 'src/rol/entities/rol.entity';
 import { TenantBaseService } from 'src/common/services/tenant-base.service';
-
 
 @Injectable()
 export class AuthService extends TenantBaseService<User> {
@@ -28,94 +25,80 @@ export class AuthService extends TenantBaseService<User> {
     super(userRepository)
   }
 
-
-  async create( createUserDto: CreateUserDto) {
-    
+  async create(tenantId: string, createUserDto: CreateUserDto) {
     try {
-
       const { password, rolId, ...userData } = createUserDto;
       
-      const rol = await this.rolRepository.findOne({ where: { id: rolId } });
+      const rol = await this.rolRepository.findOne({ 
+        where: { id: rolId, tenantId } 
+      });
       if (!rol) {
         throw new Error('El rol especificado no existe');
       }
 
       const user = this.userRepository.create({
         ...userData,
-        password: bcrypt.hashSync( password, 10 ),
+        password: bcrypt.hashSync(password, 10),
         rol,
+        tenantId
       });
 
-      
-
-      await this.userRepository.save( user )
-      delete user[password]
-      delete user[rolId]
+      await this.userRepository.save(user)
+      delete user[password];
 
       return {
         ...user,
         token: this.getJwtToken({ id: user.id, fullName: user.fullName })
       };
-      // TODO: Retornar el JWT de acceso
 
     } catch (error) {
       this.handleDBErrors(error);
     }
-
   }
 
-  
-
-  async login( loginUserDto: LoginUserDto ) {
-
+  async login(tenantId: string, loginUserDto: LoginUserDto) {
     const { password, email } = loginUserDto;
 
     const user = await this.userRepository.findOne({
-      where: { email },
-      select: { email: true, password: true, id: true, fullName: true } //! OJO!
+      where: { email, tenantId },
+      select: { email: true, password: true, id: true, fullName: true, isActive: true },
+      relations: ['rol']
     });
 
-    if ( !user ) 
+    if (!user) 
       throw new UnauthorizedException('Credentials are not valid (email)');
       
-    if ( !bcrypt.compareSync( password, user.password ) )
+    if (!user.isActive) 
+      throw new UnauthorizedException('User is inactive, talk with an admin');
+      
+    if (!bcrypt.compareSync(password, user.password))
       throw new UnauthorizedException('Credentials are not valid (password)');
-    console.log(user)
+
+    delete user[password];
+
     return {
       ...user,
       token: this.getJwtToken({ id: user.id, fullName: user.fullName })
     };
   }
 
-  async checkAuthStatus( user: User ){
-
+  async checkAuthStatus(user: User) {
     return {
       ...user,
       token: this.getJwtToken({ id: user.id, fullName: user.fullName })
     };
-
   }
-
-
   
-  private getJwtToken( payload: JwtPayload ) {
-
-    const token = this.jwtService.sign( payload );
+  private getJwtToken(payload: JwtPayload) {
+    const token = this.jwtService.sign(payload);
     return token;
-
   }
 
-  private handleDBErrors( error: any ): never {
-
-
-    if ( error.code === '23505' ) 
-      throw new BadRequestException( error.detail );
+  private handleDBErrors(error: any): never {
+    if (error.code === '23505') 
+      throw new BadRequestException(error.detail);
 
     console.log(error)
-
     throw new InternalServerErrorException('Please check server logs');
-
   }
-
-
 }

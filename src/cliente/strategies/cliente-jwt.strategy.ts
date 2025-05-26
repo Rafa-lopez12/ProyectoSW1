@@ -23,14 +23,16 @@ export class ClienteJwtStrategy extends PassportStrategy(Strategy, 'cliente-jwt'
 
     async validate(payload: ClienteJwtPayload): Promise<Cliente> {
         
-        const { id, type } = payload;
+        const { id, type, tenantId } = payload;
 
         // Verificar que el token es de tipo cliente
         if (type !== 'cliente') {
             throw new UnauthorizedException('Token no válido para cliente');
         }
 
-        const cliente = await this.clienteRepository.findOneBy({ id });
+        const cliente = await this.clienteRepository.findOne({
+            where: { id, tenantId }
+        });
 
         if (!cliente) 
             throw new UnauthorizedException('Token no válido');

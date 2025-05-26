@@ -4,33 +4,34 @@ import { UpdateProveedorDto } from './dto/update-proveedor.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Proveedor } from './entities/proveedor.entity';
 import { Repository } from 'typeorm';
+import { TenantBaseService } from '../common/services/tenant-base.service';
 
 @Injectable()
-export class ProveedorService {
+export class ProveedorService extends TenantBaseService<Proveedor> {
 
   constructor(
     
     @InjectRepository(Proveedor)
     private readonly proveedorRepository: Repository<Proveedor>,
-  ){}
+  ){
+    super(proveedorRepository)
+  }
 
 
-  async create(createProveedorDto: CreateProveedorDto) {
+  async create(tenantId: string, createProveedorDto: CreateProveedorDto) {
     try {
-      const proveedor = this.proveedorRepository.create(createProveedorDto);
-      await this.proveedorRepository.save(proveedor);
-      return proveedor;
+      return await this.createWithTenant(tenantId, createProveedorDto);
     } catch (error) {
       this.handleDBExceptions(error);
     }
   }
   
-  async findAll() {
-    return this.proveedorRepository.find();
+  async findAll(tenantId: string) {
+    return this.findAllByTenant(tenantId);
   }
   
-  async findOne(id: string) {
-    const proveedor = await this.proveedorRepository.findOne({ where: { id } });
+  async findOne(tenantid:string, id: string) {
+    const proveedor = await this.findOneByTenant(tenantid, id);
     
     if (!proveedor) {
       throw new NotFoundException(`Proveedor con ID ${id} no encontrado`);
@@ -39,44 +40,44 @@ export class ProveedorService {
     return proveedor;
   }
   
-  async findByName(nombre: string): Promise<Proveedor[]> {
-    return this.proveedorRepository.find({
-      where: {
-        nombre: nombre
-      }
-    });
+  async findByName(tenantId: string,nombre: string): Promise<Proveedor[]> {
+    return this.findByFieldAndTenant(tenantId, 'nombre', nombre);
   }
   
-  async update(id: string, updateProveedorDto: UpdateProveedorDto) {
-    const proveedor = await this.findOne(id);
+  async update(tenantId:string, id: string, updateProveedorDto: UpdateProveedorDto) {
+    //const proveedor = await this.findOne(id);
     
     try {
-      Object.assign(proveedor, updateProveedorDto);
-      await this.proveedorRepository.save(proveedor);
-      return proveedor;
+      return await this.updateByTenant(tenantId, id, updateProveedorDto);
     } catch (error) {
       this.handleDBExceptions(error);
     }
   }
   
-  async remove(id: string): Promise<void> {
-    // Soft delete - solo cambia el estado a inactivo
-    const proveedor = await this.findOne(id);
+  async remove(tenantId: string, id: string): Promise<void> {
+    const proveedor = await this.findOneByTenant(tenantId, id);
+    if (!proveedor) {
+      throw new NotFoundException(`Proveedor con ID ${id} no encontrado`);
+    }
+    
     proveedor.isActive = false;
     await this.proveedorRepository.save(proveedor);
   }
   
-  async activate(id: string): Promise<Proveedor> {
-    // Reactivar un proveedor
-    const proveedor = await this.findOne(id);
+  async activate(tenantId: string, id: string): Promise<Proveedor> {
+    const proveedor = await this.findOneByTenant(tenantId, id);
+    if (!proveedor) {
+      throw new NotFoundException(`Proveedor con ID ${id} no encontrado`);
+    }
+    
     proveedor.isActive = true;
     await this.proveedorRepository.save(proveedor);
     return proveedor;
   }
   
-  async findAllActive(): Promise<Proveedor[]> {
+  async findAllActive(tenantId: string): Promise<Proveedor[]> {
     return this.proveedorRepository.find({
-      where: { isActive: true }
+      where: { isActive: true, tenantId }
     });
   }
   

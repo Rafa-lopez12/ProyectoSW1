@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,6 +15,9 @@ import { SizeModule } from './size/size.module';
 import { VentaModule } from './venta/venta.module';
 import { ClienteModule } from './cliente/cliente.module';
 import { CarritoModule } from './carrito/carrito.module';
+import { Tenant } from './tenant/entities/tenant.entity';
+import { TenantModule } from './tenant/tenant.module';
+import { TenantMiddleware } from './common/middleware/tenant.middleware';
 
 
 
@@ -34,7 +37,7 @@ import { CarritoModule } from './carrito/carrito.module';
       autoLoadEntities: true,
       synchronize: true,
     }),
-
+    TypeOrmModule.forFeature([Tenant]),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname,'..','public'), 
     }),
@@ -49,9 +52,16 @@ import { CarritoModule } from './carrito/carrito.module';
     VentaModule,
     ClienteModule,
     CarritoModule,
+    TenantModule,
     
   ],
   providers: [],
 
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(TenantMiddleware)
+      .forRoutes('*'); // Aplicar a todas las rutas
+  }
+}

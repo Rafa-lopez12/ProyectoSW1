@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, ParseUUIDPipe, Query, NotFoundException, BadRequestException } from '@nestjs/common';
 import { VentaService } from './venta.service';
 import { CreateVentaDto } from './dto/create-venta.dto';
-import { FuncionalidadAuth } from '../auth/decorators/funcionalidad-auth.decorator';
-import { ClienteAuth } from '../cliente/decorators/cliente-auth.decorator';
+import { TenantFuncionalidadAuth, ClienteTenantAuth } from '../common/decorators/tenant-auth.decorator';
+import { GetTenantId } from '../common/decorators/get-tenant.decorator';
 import { GetCliente } from '../cliente/decorators/get-cliente.decorator';
 import { Cliente } from '../cliente/entities/cliente.entity';
 import { CarritoService } from '../carrito/carrito.service';
@@ -14,64 +14,147 @@ export class VentaController {
     private readonly carritoService: CarritoService
   ) {}
 
+  // =================== RUTAS ADMINISTRATIVAS ===================
+
   @Post()
-  @FuncionalidadAuth('crear-venta')
-  create(@Body() createVentaDto: CreateVentaDto) {
-    return this.ventaService.create(createVentaDto);
+  @TenantFuncionalidadAuth('crear-venta')
+  create(
+    @GetTenantId() tenantId: string,
+    @Body() createVentaDto: CreateVentaDto
+  ) {
+    return this.ventaService.create(tenantId, createVentaDto);
   }
 
   @Get()
-  @FuncionalidadAuth('obtener-ventas')
-  findAll() {
-    return this.ventaService.findAll();
+  @TenantFuncionalidadAuth('obtener-ventas')
+  findAll(@GetTenantId() tenantId: string) {
+    return this.ventaService.findAll(tenantId);
+  }
+
+  @Get('resumen')
+  @TenantFuncionalidadAuth('obtener-reportes-ventas')
+  getResumen(
+    @GetTenantId() tenantId: string,
+    @Query('fechaInicio') fechaInicio?: string,
+    @Query('fechaFin') fechaFin?: string
+  ) {
+    const inicio = fechaInicio ? new Date(fechaInicio) : undefined;
+    const fin = fechaFin ? new Date(fechaFin) : undefined;
+    
+    return this.ventaService.getVentasResumen(tenantId, inicio, fin);
+  }
+
+  @Get('cliente/:clienteId')
+  @TenantFuncionalidadAuth('obtener-ventas')
+  findByCliente(
+    @GetTenantId() tenantId: string,
+    @Param('clienteId', ParseUUIDPipe) clienteId: string
+  ) {
+    return this.ventaService.findByCliente(tenantId, clienteId);
+  }
+
+  @Get('usuario/:usuarioId')
+  @TenantFuncionalidadAuth('obtener-ventas')
+  findByUsuario(
+    @GetTenantId() tenantId: string,
+    @Param('usuarioId', ParseUUIDPipe) usuarioId: string
+  ) {
+    return this.ventaService.findByUsuario(tenantId, usuarioId);
+  }
+
+  @Get('fecha-rango')
+  @TenantFuncionalidadAuth('obtener-ventas')
+  findByDateRange(
+    @GetTenantId() tenantId: string,
+    @Query('fechaInicio') fechaInicio: string,
+    @Query('fechaFin') fechaFin: string
+  ) {
+    return this.ventaService.findByDateRange(
+      tenantId,
+      new Date(fechaInicio),
+      new Date(fechaFin)
+    );
   }
 
   @Get(':id')
-  @FuncionalidadAuth('obtener-venta')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.ventaService.findOne(id);
+  @TenantFuncionalidadAuth('obtener-venta')
+  findOne(
+    @GetTenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    return this.ventaService.findOne(tenantId, id);
   }
 
   @Patch('estado/:id/:nuevoEstado')
-  @FuncionalidadAuth('actualizar-estado-venta')
+  @TenantFuncionalidadAuth('actualizar-estado-venta')
   updateEstado(
+    @GetTenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Param('nuevoEstado') nuevoEstado: string
   ) {
-    return this.ventaService.updateEstado(id, nuevoEstado);
+    return this.ventaService.updateEstado(tenantId, id, nuevoEstado);
   }
 
+  // =================== RUTAS PARA CLIENTES ===================
+
   @Post('comprar')
-  @ClienteAuth()
+  @ClienteTenantAuth()
   async realizarCompra(
-    @GetCliente() cliente: Cliente,
-    // @Body() createVentaDto: Omit<CreateVentaDto, 'clienteId'>
+    @GetTenantId() tenantId: string,
+    @GetCliente() cliente: Cliente
   ) {
-    const carrito = await this.carritoService.obtenerCarrito(cliente.id);
+    // Obtener carrito del cliente en el tenant específico
+    const carrito = await this.carritoService.obtenerCarrito(tenantId, cliente.id);
   
     if (carrito.items.length === 0) {
-      throw new Error('El carrito está vacío');
+      throw new BadRequestException('El carrito está vacío');
     }
   
     const detalles = carrito.items.map(item => ({
       productoVariedadId: item.productoVariedadId,
       cantidad: item.cantidad,
-      precioUnitario: item.variedad.precio,
-      descuentoLinea: 0
+      precioUnitario: item.variedad.precio
     }));
 
     const ventaCompleta: CreateVentaDto = {
       clienteId: cliente.id,
       detalles,
+      observaciones: 'Compra realizada desde carrito'
     };
   
-    const venta = await this.ventaService.create(ventaCompleta);
+    const venta = await this.ventaService.create(tenantId, ventaCompleta);
   
-    await this.carritoService.vaciarCarrito(cliente.id);
+    // Vaciar carrito después de la compra exitosa
+    await this.carritoService.vaciarCarrito(tenantId, cliente.id);
   
     return {
       ...venta,
       mensaje: 'Compra realizada exitosamente desde el carrito.'
     };
+  }
+
+  @Get('mis-compras')
+  @ClienteTenantAuth()
+  getMyPurchases(
+    @GetTenantId() tenantId: string,
+    @GetCliente() cliente: Cliente
+  ) {
+    return this.ventaService.findByCliente(tenantId, cliente.id);
+  }
+
+  @Get('mi-compra/:id')
+  @ClienteTenantAuth()
+  getMyPurchase(
+    @GetTenantId() tenantId: string,
+    @GetCliente() cliente: Cliente,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    // Primero verificar que la venta pertenece al cliente
+    return this.ventaService.findOne(tenantId, id).then(venta => {
+      if (venta.cliente.id !== cliente.id) {
+        throw new NotFoundException('Venta no encontrada');
+      }
+      return venta;
+    });
   }
 }

@@ -8,9 +8,10 @@ import { Proveedor } from 'src/proveedor/entities/proveedor.entity';
 import { Repository, DataSource } from 'typeorm';
 import { DetalleMov } from './entities/detalle_mov_inv.entity';
 import { MovimientoInv } from './entities/movimiento_inv.entity';
+import { TenantBaseService } from '../common/services/tenant-base.service';
 
 @Injectable()
-export class MovimientoInvService {
+export class MovimientoInvService extends TenantBaseService<MovimientoInv> {
   
   constructor(
     @InjectRepository(MovimientoInv)
@@ -29,41 +30,53 @@ export class MovimientoInvService {
     private readonly productoVariedadRepository: Repository<ProductoVariedad>,
     
     private readonly dataSource: DataSource,
-  ) {}
+  ) {
+    super(movimientoRepository);
+  }
   
-  
-  async create(createMovimientoInvDto: CreateMovimientoInvDto) {
+  async create(tenantId: string, createMovimientoInvDto: CreateMovimientoInvDto) {
     const { usuarioId, proveedorId, detalles, fechaRegistro, montoTotal } = createMovimientoInvDto;
   
-    const usuario = await this.userRepository.findOne({ where: { id: usuarioId } });
+    // Verificar que el usuario pertenece al tenant
+    const usuario = await this.userRepository.findOne({ 
+      where: { id: usuarioId, tenantId } 
+    });
     if (!usuario) {
-      throw new NotFoundException(`Usuario con ID ${usuarioId} no encontrado`);
+      throw new NotFoundException(`Usuario con ID ${usuarioId} no encontrado en este tenant`);
     }
   
-    const proveedor = await this.proveedorRepository.findOne({ where: { id: proveedorId } });
+    // Verificar que el proveedor pertenece al tenant
+    const proveedor = await this.proveedorRepository.findOne({ 
+      where: { id: proveedorId, tenantId } 
+    });
     if (!proveedor) {
-      throw new NotFoundException(`Proveedor con ID ${proveedorId} no encontrado`);
+      throw new NotFoundException(`Proveedor con ID ${proveedorId} no encontrado en este tenant`);
     }
   
     return await this.dataSource.transaction(async manager => {
+      // Crear movimiento con tenantId
       const movimiento = manager.create(MovimientoInv, {
         usuario,
         proveedor,
         fechaRegistro: fechaRegistro ? new Date(fechaRegistro) : new Date(),
         montoTotal,
+        tenantId
       });
   
       const savedMovimiento = await manager.save(MovimientoInv, movimiento);
       console.log('Movimiento guardado:', savedMovimiento);
   
       for (const detalleDto of detalles) {
+        // Verificar que la variedad del producto pertenece al tenant
         const productoVariedad = await manager.findOne(ProductoVariedad, {
-          where: { Id: detalleDto.productoVariedadId },
+          where: { Id: detalleDto.productoVariedadId, tenantId },
           relations: ['size', 'producto']
         });
       
         if (!productoVariedad) {
-          throw new NotFoundException(`Variedad de producto con ID ${detalleDto.productoVariedadId} no encontrada`);
+          throw new NotFoundException(
+            `Variedad de producto con ID ${detalleDto.productoVariedadId} no encontrada en este tenant`
+          );
         }
       
         const detalle = manager.create(DetalleMov, {
@@ -72,36 +85,38 @@ export class MovimientoInvService {
           movimientoInv: savedMovimiento,
           productoVariedad,
           cantidad: detalleDto.cantidad,
-          precio: detalleDto.precio
+          precio: detalleDto.precio,
+          tenantId
         });
       
         await manager.save(DetalleMov, detalle);
+        
+        // Incrementar stock
         productoVariedad.quantity += detalleDto.cantidad;
         await manager.save(ProductoVariedad, productoVariedad);
-      
       }
   
-      // Retornar datos simples en lugar de llamar findOne
       return {
-        // id: savedMovimiento.id,
-        // usuario: {
-        //   id: usuario.id,
-        //   fullName: usuario.fullName
-        // },
-        // proveedor: {
-        //   id: proveedor.id,
-        //   nombre: proveedor.nombre
-        // },
-        // fechaRegistro: savedMovimiento.fechaRegistro,
-        // montoTotal: savedMovimiento.montoTotal,
-        // cantidadDetalles: detalles.length,
+        id: savedMovimiento.id,
+        usuario: {
+          id: usuario.id,
+          fullName: usuario.fullName
+        },
+        proveedor: {
+          id: proveedor.id,
+          nombre: proveedor.nombre
+        },
+        fechaRegistro: savedMovimiento.fechaRegistro,
+        montoTotal: savedMovimiento.montoTotal,
+        cantidadDetalles: detalles.length,
         message: 'Movimiento de inventario creado exitosamente'
       };
     });
   }
 
-  async findAll() {
+  async findAll(tenantId: string) {
     const movimientos = await this.movimientoRepository.find({
+      where: { tenantId },
       relations: [
         'usuario', 
         'proveedor', 
@@ -128,9 +143,9 @@ export class MovimientoInvService {
     }));
   }
 
-  async findOne(id: string) {
+  async findOne(tenantId: string, id: string) {
     const movimiento = await this.movimientoRepository.findOne({
-      where: { id },
+      where: { id, tenantId },
       relations: [
         'usuario', 
         'proveedor', 
@@ -142,7 +157,7 @@ export class MovimientoInvService {
     });
   
     if (!movimiento) {
-      throw new NotFoundException(`Movimiento con ID ${id} no encontrado`);
+      throw new NotFoundException(`Movimiento con ID ${id} no encontrado en este tenant`);
     }
   
     return {
@@ -161,6 +176,40 @@ export class MovimientoInvService {
     };
   }
 
+  // Métodos adicionales específicos para tenant
+  async findByProveedor(tenantId: string, proveedorId: string) {
+    return this.movimientoRepository.find({
+      where: { 
+        tenantId,
+        proveedor: { id: proveedorId }
+      },
+      relations: ['usuario', 'proveedor', 'detalles']
+    });
+  }
+
+  async findByUsuario(tenantId: string, usuarioId: string) {
+    return this.movimientoRepository.find({
+      where: { 
+        tenantId,
+        usuario: { id: usuarioId }
+      },
+      relations: ['usuario', 'proveedor', 'detalles']
+    });
+  }
+
+  async findByDateRange(tenantId: string, fechaInicio: Date, fechaFin: Date) {
+    return this.movimientoRepository
+      .createQueryBuilder('movimiento')
+      .where('movimiento.tenantId = :tenantId', { tenantId })
+      .andWhere('movimiento.fechaRegistro BETWEEN :fechaInicio AND :fechaFin', {
+        fechaInicio,
+        fechaFin
+      })
+      .leftJoinAndSelect('movimiento.usuario', 'usuario')
+      .leftJoinAndSelect('movimiento.proveedor', 'proveedor')
+      .leftJoinAndSelect('movimiento.detalles', 'detalles')
+      .getMany();
+  }
 
   private handleDBExceptions(error: any) {
     if (error.code === '23505')
@@ -169,5 +218,4 @@ export class MovimientoInvService {
     console.error(error);
     throw new BadRequestException('Error inesperado, revisar logs del servidor');
   }
-
 }

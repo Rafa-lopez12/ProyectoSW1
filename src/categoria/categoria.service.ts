@@ -39,7 +39,11 @@ export class CategoriaService extends TenantBaseService<Categoria> {
   }
 
   async update(tenantId: string, id: string, updateCategoryDto: UpdateCategoryDto) {
-    const category = await this.findOne(id);
+    const category = await this.findOneByTenant(tenantId, id);
+    
+    if (!category) {
+      throw new NotFoundException(`Category with ID ${id} not found`);
+    }
     
     Object.assign(category, updateCategoryDto);
     
@@ -51,8 +55,11 @@ export class CategoriaService extends TenantBaseService<Categoria> {
   }
 
   async remove(tenantId: string, id: string) {
-    const category = await this.findOne(id);
-    await this.categoryRepository.remove(category);
+    const deleted = await this.deleteByTenant(tenantId, id);
+    
+    if (!deleted) {
+      throw new NotFoundException(`Category with ID ${id} not found`);
+    }
     
     return {
       message: `Category with ID ${id} was successfully removed`

@@ -6,9 +6,10 @@ import { Cliente } from '../cliente/entities/cliente.entity';
 import { ProductoVariedad } from '../producto/entities/productoVariedad.entity';
 import { AgregarCarritoDto } from './dto/create-carrito.dto';
 import { ActualizarCantidadCarritoDto } from './dto/actualizar-cantidad-carrito.dto';
+import { TenantBaseService } from '../common/services/tenant-base.service';
 
 @Injectable()
-export class CarritoService {
+export class CarritoService extends TenantBaseService<Carrito> {
   constructor(
     @InjectRepository(Carrito)
     private readonly carritoRepository: Repository<Carrito>,
@@ -18,25 +19,29 @@ export class CarritoService {
     
     @InjectRepository(ProductoVariedad)
     private readonly productoVariedadRepository: Repository<ProductoVariedad>,
-  ) {}
+  ) {
+    super(carritoRepository);
+  }
 
-  async agregarAlCarrito(clienteId: string, agregarCarritoDto: AgregarCarritoDto) {
+  async agregarAlCarrito(tenantId: string, clienteId: string, agregarCarritoDto: AgregarCarritoDto) {
     const { productoVariedadId, cantidad } = agregarCarritoDto;
 
-    // Verificar que el cliente existe
-    const cliente = await this.clienteRepository.findOne({ where: { id: clienteId } });
+    // Verificar que el cliente existe y pertenece al tenant
+    const cliente = await this.clienteRepository.findOne({ 
+      where: { id: clienteId, tenantId } 
+    });
     if (!cliente) {
-      throw new NotFoundException(`Cliente con ID ${clienteId} no encontrado`);
+      throw new NotFoundException(`Cliente con ID ${clienteId} no encontrado en este tenant`);
     }
 
-    // Verificar que la variedad del producto existe y tiene stock
+    // Verificar que la variedad del producto existe y pertenece al tenant
     const productoVariedad = await this.productoVariedadRepository.findOne({
-      where: { Id: productoVariedadId },
+      where: { Id: productoVariedadId, tenantId },
       relations: ['size', 'producto']
     });
 
     if (!productoVariedad) {
-      throw new NotFoundException(`Variedad de producto con ID ${productoVariedadId} no encontrada`);
+      throw new NotFoundException(`Variedad de producto con ID ${productoVariedadId} no encontrada en este tenant`);
     }
 
     if (productoVariedad.quantity < cantidad) {
@@ -45,9 +50,9 @@ export class CarritoService {
       );
     }
 
-    // Verificar si el producto ya está en el carrito
+    // Verificar si el producto ya está en el carrito del cliente en este tenant
     const itemExistente = await this.carritoRepository.findOne({
-      where: { clienteId, productoVariedadId }
+      where: { clienteId, productoVariedadId, tenantId }
     });
 
     if (itemExistente) {
@@ -71,7 +76,9 @@ export class CarritoService {
           cantidad: itemExistente.cantidad,
           producto: productoVariedad.producto.name,
           talla: productoVariedad.size.name,
-          color: productoVariedad.color
+          color: productoVariedad.color,
+          precioUnitario: productoVariedad.price,
+          subtotal: itemExistente.cantidad * productoVariedad.price
         }
       };
     } else {
@@ -81,7 +88,8 @@ export class CarritoService {
         productoVariedadId,
         cliente,
         productoVariedad,
-        cantidad
+        cantidad,
+        tenantId
       });
 
       await this.carritoRepository.save(nuevoItem);
@@ -93,15 +101,25 @@ export class CarritoService {
           cantidad: nuevoItem.cantidad,
           producto: productoVariedad.producto.name,
           talla: productoVariedad.size.name,
-          color: productoVariedad.color
+          color: productoVariedad.color,
+          precioUnitario: productoVariedad.price,
+          subtotal: nuevoItem.cantidad * productoVariedad.price
         }
       };
     }
   }
 
-  async obtenerCarrito(clienteId: string) {
+  async obtenerCarrito(tenantId: string, clienteId: string) {
+    // Verificar que el cliente pertenece al tenant
+    const cliente = await this.clienteRepository.findOne({ 
+      where: { id: clienteId, tenantId } 
+    });
+    if (!cliente) {
+      throw new NotFoundException(`Cliente con ID ${clienteId} no encontrado en este tenant`);
+    }
+
     const itemsCarrito = await this.carritoRepository.find({
-      where: { clienteId },
+      where: { clienteId, tenantId },
       relations: ['productoVariedad', 'productoVariedad.size', 'productoVariedad.producto'],
     });
 
@@ -127,25 +145,34 @@ export class CarritoService {
 
     return {
       clienteId,
+      tenantId,
       items,
       resumen: {
         totalItems,
         totalProductos: items.length,
-        total
+        total: Math.round(total * 100) / 100
       }
     };
   }
 
-  async actualizarCantidad(clienteId: string, productoVariedadId: string, actualizarCantidadDto: ActualizarCantidadCarritoDto) {
+  async actualizarCantidad(tenantId: string, clienteId: string, productoVariedadId: string, actualizarCantidadDto: ActualizarCantidadCarritoDto) {
     const { cantidad } = actualizarCantidadDto;
 
+    // Verificar que el cliente pertenece al tenant
+    const cliente = await this.clienteRepository.findOne({ 
+      where: { id: clienteId, tenantId } 
+    });
+    if (!cliente) {
+      throw new NotFoundException(`Cliente con ID ${clienteId} no encontrado en este tenant`);
+    }
+
     const itemCarrito = await this.carritoRepository.findOne({
-      where: { clienteId, productoVariedadId },
+      where: { clienteId, productoVariedadId, tenantId },
       relations: ['productoVariedad', 'productoVariedad.size', 'productoVariedad.producto']
     });
 
     if (!itemCarrito) {
-      throw new NotFoundException('Producto no encontrado en el carrito');
+      throw new NotFoundException('Producto no encontrado en el carrito de este cliente');
     }
 
     // Verificar stock disponible
@@ -166,38 +193,60 @@ export class CarritoService {
         producto: itemCarrito.productoVariedad.producto.name,
         talla: itemCarrito.productoVariedad.size.name,
         color: itemCarrito.productoVariedad.color,
+        precioUnitario: itemCarrito.productoVariedad.price,
         subtotal: itemCarrito.cantidad * itemCarrito.productoVariedad.price
       }
     };
   }
 
-  async removerProducto(clienteId: string, productoVariedadId: string) {
+  async removerProducto(tenantId: string, clienteId: string, productoVariedadId: string) {
+    // Verificar que el cliente pertenece al tenant
+    const cliente = await this.clienteRepository.findOne({ 
+      where: { id: clienteId, tenantId } 
+    });
+    if (!cliente) {
+      throw new NotFoundException(`Cliente con ID ${clienteId} no encontrado en este tenant`);
+    }
+
     const result = await this.carritoRepository.delete({
       clienteId,
-      productoVariedadId
+      productoVariedadId,
+      tenantId
     });
 
     if (result.affected === 0) {
-      throw new NotFoundException('Producto no encontrado en el carrito');
+      throw new NotFoundException('Producto no encontrado en el carrito de este cliente');
     }
 
     return { message: 'Producto eliminado del carrito' };
   }
 
-  async vaciarCarrito(clienteId: string, productosComprados?: string[]) {
+  async vaciarCarrito(tenantId: string, clienteId: string, productosComprados?: string[]) {
+    // Verificar que el cliente pertenece al tenant
+    const cliente = await this.clienteRepository.findOne({ 
+      where: { id: clienteId, tenantId } 
+    });
+    if (!cliente) {
+      throw new NotFoundException(`Cliente con ID ${clienteId} no encontrado en este tenant`);
+    }
+
     if (productosComprados && productosComprados.length > 0) {
       // Eliminar solo los productos específicos que se compraron
       await this.carritoRepository.delete({
         clienteId,
-        productoVariedadId: In(productosComprados)
+        productoVariedadId: In(productosComprados),
+        tenantId
       });
 
       return { 
         message: `${productosComprados.length} productos eliminados del carrito después de la compra`
       };
     } else {
-      // Eliminar todo el carrito
-      const result = await this.carritoRepository.delete({ clienteId });
+      // Eliminar todo el carrito del cliente en este tenant
+      const result = await this.carritoRepository.delete({ 
+        clienteId, 
+        tenantId 
+      });
       
       return { 
         message: `Carrito vaciado. ${result.affected || 0} productos eliminados`
@@ -205,18 +254,65 @@ export class CarritoService {
     }
   }
 
-  async contarItemsCarrito(clienteId: string): Promise<number> {
-    return await this.carritoRepository.count({ where: { clienteId } });
+  async contarItemsCarrito(tenantId: string, clienteId: string): Promise<number> {
+    // Verificar que el cliente pertenece al tenant
+    const cliente = await this.clienteRepository.findOne({ 
+      where: { id: clienteId, tenantId } 
+    });
+    if (!cliente) {
+      return 0;
+    }
+
+    return await this.carritoRepository.count({ 
+      where: { clienteId, tenantId } 
+    });
   }
 
   // Método para obtener solo los IDs de productos en el carrito (útil para vaciar después de compra)
-  async obtenerProductosDelCarrito(clienteId: string): Promise<string[]> {
+  async obtenerProductosDelCarrito(tenantId: string, clienteId: string): Promise<string[]> {
+    // Verificar que el cliente pertenece al tenant
+    const cliente = await this.clienteRepository.findOne({ 
+      where: { id: clienteId, tenantId } 
+    });
+    if (!cliente) {
+      return [];
+    }
+
     const items = await this.carritoRepository.find({
-      where: { clienteId },
+      where: { clienteId, tenantId },
       select: ['productoVariedadId']
     });
 
     return items.map(item => item.productoVariedadId);
+  }
+
+  // Métodos adicionales específicos para tenant
+  async obtenerCarritosPorTenant(tenantId: string) {
+    return this.carritoRepository
+      .createQueryBuilder('carrito')
+      .where('carrito.tenantId = :tenantId', { tenantId })
+      .leftJoinAndSelect('carrito.cliente', 'cliente')
+      .leftJoinAndSelect('carrito.productoVariedad', 'productoVariedad')
+      .leftJoinAndSelect('productoVariedad.producto', 'producto')
+      .leftJoinAndSelect('productoVariedad.size', 'size')
+      .getMany();
+  }
+
+  async obtenerEstadisticasCarritos(tenantId: string) {
+    const result = await this.carritoRepository
+      .createQueryBuilder('carrito')
+      .select('COUNT(DISTINCT carrito.clienteId)', 'carritoActivos')
+      .addSelect('COUNT(*)', 'totalItems')
+      .addSelect('SUM(carrito.cantidad)', 'totalProductos')
+      .where('carrito.tenantId = :tenantId', { tenantId })
+      .getRawOne();
+
+    return {
+      carritoActivos: parseInt(result.carritoActivos) || 0,
+      totalItems: parseInt(result.totalItems) || 0,
+      totalProductos: parseInt(result.totalProductos) || 0,
+      tenantId
+    };
   }
 
   private handleDBExceptions(error: any) {

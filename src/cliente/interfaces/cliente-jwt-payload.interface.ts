@@ -4,5 +4,6 @@ export interface ClienteJwtPayload {
     firstName: string;
     lastName: string;
     type: 'cliente'; // Para diferenciar del token de admin
+    tenantId:string
 }
 

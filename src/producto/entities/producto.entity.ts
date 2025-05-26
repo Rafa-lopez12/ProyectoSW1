@@ -26,6 +26,9 @@ export class Producto {
     @JoinColumn({ name: 'category_id' })
     category: Categoria;
 
+    @Column()
+    tenantId:string
+
     @ManyToOne(() => Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant: Tenant;

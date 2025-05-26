@@ -4,54 +4,75 @@ import { CreateProductDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
 import { Funcionalidad } from '../auth/decorators/funcionalidad.decorator';
 import { ProductFilterInterface } from './interface/product-filter.interface';
+import { GetTenantId } from '../common/decorators/get-tenant.decorator';
+import { TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
 
 @Controller('producto')
 export class ProductoController {
   constructor(private readonly productoService: ProductoService) {}
 
   @Post()
-  @Funcionalidad('crear-producto')
-  create(@Body() createProductoDto: CreateProductDto) {
-    return this.productoService.create(createProductoDto);
+  @TenantFuncionalidadAuth('crear-producto')
+  create(
+    @GetTenantId() tenantId: string,
+    @Body() createProductoDto: CreateProductDto
+  ) {
+    return this.productoService.create(tenantId, createProductoDto);
   }
 
   @Get('findAll')
-  @Funcionalidad('obtener-productos')
-  findAll(@Query() filters: ProductFilterInterface) {
-    return this.productoService.findAll();
+  @TenantFuncionalidadAuth('obtener-productos')
+  findAll(
+    @GetTenantId() tenantId: string,
+    @Query() filters: ProductFilterInterface
+  ) {
+    return this.productoService.findAll(tenantId, filters);
   }
 
   @Get(':id')
-  @Funcionalidad('obtener-producto')
-  findOne(@Param('id') id: string) {
-    return this.productoService.findOne(id);
+  @TenantFuncionalidadAuth('obtener-producto')
+  findOne(
+    @GetTenantId() tenantId: string,
+    @Param('id') id: string
+  ) {
+    return this.productoService.findOne(tenantId, id);
   }
 
   @Patch('actualizar/:id')
-  @Funcionalidad('actualizar-producto')
-  update(@Param('id') id: string, @Body() updateProductoDto: UpdateProductoDto) {
-    return this.productoService.update(id, updateProductoDto);
+  @TenantFuncionalidadAuth('actualizar-producto')
+  update(
+    @GetTenantId() tenantId: string,
+    @Param('id') id: string, 
+    @Body() updateProductoDto: UpdateProductoDto
+  ) {
+    return this.productoService.update(tenantId, id, updateProductoDto);
   }
 
   @Delete('eliminar/:id')
-  @Funcionalidad('eliminar-producto')
-  remove(@Param('id') id: string) {
-    return this.productoService.remove(id);
+  @TenantFuncionalidadAuth('eliminar-producto')
+  remove(
+    @GetTenantId() tenantId: string,
+    @Param('id') id: string
+  ) {
+    return this.productoService.remove(tenantId, id);
   }
 
-
   @Get('category/:categoryId')
-  findByCategory(@Param('categoryId') categoryId: string) {
-    return this.productoService.findByCategory(categoryId);
+  findByCategory(
+    @GetTenantId() tenantId: string,
+    @Param('categoryId') categoryId: string
+  ) {
+    return this.productoService.findByCategory(tenantId, categoryId);
   }
   
   @Get('subcategory/:subcategory')
-  findBySubcategory(@Param('subcategory') subcategory: string) {
-    return this.productoService.findBySubcategory(subcategory);
+  findBySubcategory(
+    @GetTenantId() tenantId: string,
+    @Param('subcategory') subcategory: string
+  ) {
+    return this.productoService.findBySubcategory(tenantId, subcategory);
   }
-
-
-  
 }
+
 
 

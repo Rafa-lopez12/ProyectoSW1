@@ -3,59 +3,62 @@ import { ProveedorService } from './proveedor.service';
 import { CreateProveedorDto } from './dto/create-proveedor.dto';
 import { UpdateProveedorDto } from './dto/update-proveedor.dto';
 import { FuncionalidadAuth } from 'src/auth/decorators/funcionalidad-auth.decorator';
+import { GetTenantId } from '../common/decorators/get-tenant.decorator';
+import { TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
 
 @Controller('proveedor')
 export class ProveedorController {
   constructor(private readonly proveedorService: ProveedorService) {}
 
   @Post()
-  @FuncionalidadAuth('crear-proveedor')
-  create(@Body() createProveedorDto: CreateProveedorDto) {
-    return this.proveedorService.create(createProveedorDto);
+  @TenantFuncionalidadAuth('crear-proveedor')
+  create(@GetTenantId() tenantId: string, @Body() createProveedorDto: CreateProveedorDto ) {
+    return this.proveedorService.create(tenantId, createProveedorDto);
   }
   
   @Get()
-  @FuncionalidadAuth('obtener-proveedores')
-  findAll() {
-    return this.proveedorService.findAll();
+  @TenantFuncionalidadAuth('obtener-proveedores')
+  findAll(@GetTenantId() tenantId: string) {
+    return this.proveedorService.findAll(tenantId);
   }
   
   @Get('active')
-  @FuncionalidadAuth('obtener-proveedores')
-  findAllActive() {
-    return this.proveedorService.findAllActive();
+  @TenantFuncionalidadAuth('obtener-proveedores')
+  findAllActive(@GetTenantId() tenantId: string) {
+    return this.proveedorService.findAllActive(tenantId);
   }
   
   @Get(':id')
-  @FuncionalidadAuth('obtener-proveedor')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.proveedorService.findOne(id);
+  @TenantFuncionalidadAuth('obtener-proveedor')
+  findOne(@GetTenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return this.proveedorService.findOne(tenantId, id);
   }
   
   @Get('buscar/nombre')
-  @FuncionalidadAuth('obtener-proveedor')
-  findByName(@Query('nombre') nombre: string) {
-    return this.proveedorService.findByName(nombre);
+  @TenantFuncionalidadAuth('obtener-proveedor')
+  findByName(@GetTenantId() tenantId: string, @Query('nombre') nombre: string) {
+    return this.proveedorService.findByName(tenantId, nombre);
   }
   
   @Patch(':id')
-  @FuncionalidadAuth('actualizar-proveedor')
+  @TenantFuncionalidadAuth('actualizar-proveedor')
   update(
+    @GetTenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProveedorDto: UpdateProveedorDto,
   ) {
-    return this.proveedorService.update(id, updateProveedorDto);
+    return this.proveedorService.update(tenantId, id, updateProveedorDto);
   }
   
   @Delete(':id')
-  @FuncionalidadAuth('desactivar-proveedor')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.proveedorService.remove(id);
+  @TenantFuncionalidadAuth('desactivar-proveedor')
+  remove(@GetTenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return this.proveedorService.remove(tenantId,id);
   }
   
   @Patch('activate/:id')
-  @FuncionalidadAuth('activar-proveedor')
-  activate(@Param('id', ParseUUIDPipe) id: string) {
-    return this.proveedorService.activate(id);
+  @TenantFuncionalidadAuth('activar-proveedor')
+  activate(@GetTenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return this.proveedorService.activate(tenantId, id);
   }
 }

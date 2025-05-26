@@ -10,9 +10,10 @@ import { CategoriaService } from '../categoria/categoria.service';
 import { ProductoImage } from './entities/ProductoImagen.entity';
 import { ProductFilterInterface } from './interface/product-filter.interface';
 import { Size } from '../size/entities/size.entity';
+import { TenantBaseService } from '../common/services/tenant-base.service';
 
 @Injectable()
-export class ProductoService {
+export class ProductoService extends TenantBaseService<Producto> {
   constructor(
     @InjectRepository(Producto)
     private readonly productRepository: Repository<Producto>,
@@ -29,30 +30,31 @@ export class ProductoService {
     private readonly sizeRepository: Repository<Size>,
 
     private readonly dataSource: DataSource,
-  ) {}
+  ) {
+    super(productRepository)
+  }
 
-  async create(createProductDto: CreateProductDto) {
-    console.log(createProductDto)
+  async create(tenantId: string, createProductDto: CreateProductDto) {
     try {
       const { imageUrls = [], productSizes, categoryId, ...productDetails } = createProductDto;
       
-      const category = await this.categoriesService.findOne(categoryId);
+      const category = await this.categoriesService.findOne(tenantId, categoryId);
       
-
-      
-      const product = this.productRepository.create({
+      const productData = {
         ...productDetails,
         category,
-      });
-      console.log(product, "hola")
+        tenantId
+      };
+      
+      const product = this.productRepository.create(productData);
       const savedProduct = await this.productRepository.save(product);
       
-      
-      const productSizeEntities: ProductoVariedad[]=[]
+      const productSizeEntities: ProductoVariedad[] = [];
       
       for (const sizeData of productSizes) {
-
-        const size = await this.sizeRepository.findOne({ where: { id: sizeData.size } });
+        const size = await this.sizeRepository.findOne({ 
+          where: { id: sizeData.size, tenantId } 
+        });
       
         if (!size) {
           throw new NotFoundException(`Size with ID ${sizeData.size} not found`);
@@ -61,48 +63,48 @@ export class ProductoService {
         const productSize = this.productSizeRepository.create({
           producto: savedProduct,
           size: size,
-          color:sizeData.color,
+          color: sizeData.color,
           quantity: sizeData.quantity,
           price: sizeData.price,
+          tenantId
         });
         
         productSizeEntities.push(productSize);
       }
-      console.log(productSizeEntities, "holaaa")
       
       await this.productSizeRepository.save(productSizeEntities);
-      
       
       if (imageUrls.length > 0) {
         const imageEntities = imageUrls.map(url => 
           this.productImageRepository.create({
             url,
-            productId: savedProduct
+            productId: savedProduct,
+            tenantId
           })
         );
         
         await this.productImageRepository.save(imageEntities);
       }
       
-    
-      return this.findOne(savedProduct.id);
+      return this.findOne(tenantId, savedProduct.id);
       
     } catch (error) {
       this.handleDBExceptions(error);
     }
   }
 
-  async findAll(filters?: ProductFilterInterface) {
+  async findAll(tenantId: string, filters?: ProductFilterInterface) {
     const queryBuilder = this.productRepository.createQueryBuilder('product')
       .leftJoinAndSelect('product.category', 'category')
       .leftJoinAndSelect('product.productoVariedad', 'productoVariedad')
-      .leftJoinAndSelect('product.images', 'images');
+      .leftJoinAndSelect('product.images', 'images')
+      .where('product.tenantId = :tenantId', { tenantId });
 
-      if (filters?.active !== undefined) {
-        queryBuilder.andWhere('product.isActive = :active', { active: filters.active });
-      } else {
-        queryBuilder.andWhere('product.isActive = :active', { active: true });
-      }
+    if (filters?.active !== undefined) {
+      queryBuilder.andWhere('product.isActive = :active', { active: filters.active });
+    } else {
+      queryBuilder.andWhere('product.isActive = :active', { active: true });
+    }
     
     if (filters) {
       if (filters.categoryId) {
@@ -113,12 +115,8 @@ export class ProductoService {
         queryBuilder.andWhere('product.subcategory = :subcategory', { subcategory: filters.subcategory });
       }
       
-      if (filters.active !== undefined) {
-        queryBuilder.andWhere('product.isActive = :active', { active: filters.active });
-      }
-      
       if (filters.search) {
-        queryBuilder.andWhere('product.name LIKE :search OR product.description LIKE :search', 
+        queryBuilder.andWhere('(product.name LIKE :search OR product.description LIKE :search)', 
           { search: `%${filters.search}%` });
       }
     }
@@ -126,12 +124,13 @@ export class ProductoService {
     return queryBuilder.getMany();
   }
 
-  async findOne(id: string) {
+  async findOne(tenantId: string, id: string) {
     const product = await this.productRepository.findOne({
-      where: { id },
+      where: { id, tenantId },
       relations: [
         'category',
         'productoVariedad',
+        'productoVariedad.size',
         'images'
       ]
     });
@@ -143,42 +142,33 @@ export class ProductoService {
     return product;
   }
 
-  async update(id: string, updateProductDto: UpdateProductoDto) {
+  async update(tenantId: string, id: string, updateProductDto: UpdateProductoDto) {
     try {
       const { categoryId, productSizes, imageUrls, ...toUpdate } = updateProductDto;
       
-      const producto = await this.productRepository.findOne({
-        where: { id },
-        relations: ['productoVariedad', 'category', 'images']
-      });
+      const producto = await this.findOne(tenantId, id);
       
-      if (!producto) {
-        throw new NotFoundException(`Producto con ID ${id} no encontrado`);
-      }
-    
       if (categoryId) {
-        const category = await this.categoriesService.findOne(categoryId);
+        const category = await this.categoriesService.findOne(tenantId, categoryId);
         producto.category = category;
       }
       
       Object.assign(producto, toUpdate);
-      
-     
       await this.productRepository.save(producto);
       
       if (productSizes && productSizes.length > 0) {
-    
         const variedadesActuales = await this.productSizeRepository.find({
-          where: { producto: { id } }
+          where: { producto: { id }, tenantId },
+          relations: ['size']
         });
         
         const mapaVariedadesActuales = new Map();
         variedadesActuales.forEach(variedad => {
-          const key = `${variedad.size}-${variedad.color}`;
+          const key = `${variedad.size.id}-${variedad.color}`;
           mapaVariedadesActuales.set(key, variedad);
         });
         
-        const variedadesACrear: ProductoVariedad[] = []
+        const variedadesACrear: ProductoVariedad[] = [];
         const variedadesAActualizar: ProductoVariedad[] = [];
         const keysNuevasVariedades = new Set();
         
@@ -186,12 +176,13 @@ export class ProductoService {
           const key = `${nuevaVariedad.size}-${nuevaVariedad.color}`;
           keysNuevasVariedades.add(key);
 
-          const size = await this.sizeRepository.findOne({ where: { id: nuevaVariedad.size } });
+          const size = await this.sizeRepository.findOne({ 
+            where: { id: nuevaVariedad.size, tenantId } 
+          });
       
           if (!size) {
             throw new NotFoundException(`Size with ID ${nuevaVariedad.size} not found`);
           }
-          
           
           if (mapaVariedadesActuales.has(key)) {
             const variedadExistente = mapaVariedadesActuales.get(key);
@@ -201,19 +192,19 @@ export class ProductoService {
           } else {
             variedadesACrear.push(
               this.productSizeRepository.create({
-                Id: id,
                 size: size,
                 color: nuevaVariedad.color,
                 quantity: nuevaVariedad.quantity,
                 price: nuevaVariedad.price,
-                producto
+                producto,
+                tenantId
               })
             );
           }
         }
         
         const variedadesAEliminar = variedadesActuales.filter(variedad => {
-          const key = `${variedad.size}-${variedad.color}`;
+          const key = `${variedad.size.id}-${variedad.color}`;
           return !keysNuevasVariedades.has(key);
         });
       
@@ -222,7 +213,6 @@ export class ProductoService {
             await manager.remove(variedadesAEliminar);
           }
           
-          // Actualizar variantes existentes
           if (variedadesAActualizar.length > 0) {
             await manager.save(variedadesAActualizar);
           }
@@ -242,7 +232,8 @@ export class ProductoService {
           const imagenesNuevas = imageUrls.map(url => 
             this.productImageRepository.create({
               url,
-              productId: producto
+              productId: producto,
+              tenantId
             })
           );
           
@@ -250,23 +241,16 @@ export class ProductoService {
         }
       }
       
-      return this.findOne(id);
+      return this.findOne(tenantId, id);
     } catch (error) {
       this.handleDBExceptions(error);
     }
   }
 
-  async remove(id: string) {
+  async remove(tenantId: string, id: string) {
     try {
-   
-      const producto = await this.findOne(id);
-  
-      if (!producto) {
-        throw new NotFoundException(`Producto con ID ${id} no encontrado`);
-      }
-  
+      const producto = await this.findOne(tenantId, id);
       producto.isActive = false;
-  
       await this.productRepository.save(producto);
       
       return {
@@ -277,12 +261,12 @@ export class ProductoService {
     }
   }
   
-  async findByCategory(categoryId: string) {
-    return this.findAll({ categoryId });
+  async findByCategory(tenantId: string, categoryId: string) {
+    return this.findAll(tenantId, { categoryId });
   }
   
-  async findBySubcategory(subcategory: string) {
-    return this.findAll({ subcategory });
+  async findBySubcategory(tenantId: string, subcategory: string) {
+    return this.findAll(tenantId, { subcategory });
   }
   
   private handleDBExceptions(error: any) {

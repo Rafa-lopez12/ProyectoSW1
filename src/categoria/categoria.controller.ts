@@ -2,40 +2,53 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { CategoriaService } from './categoria.service';
 import { CreateCategoriaDto } from './dto/create-categoria.dto';
 import { UpdateCategoryDto } from './dto/update-categoria.dto';
-import { FuncionalidadGuard } from '../auth/guards/funcionalidad.guard';
-import { FuncionalidadAuth } from '../auth/decorators/funcionalidad-auth.decorator';
+import { GetTenantId } from '../common/decorators/get-tenant.decorator';
+import { TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
 
 @Controller('categoria')
 export class CategoriaController {
   constructor(private readonly categoriaService: CategoriaService) {}
 
   @Post()
-  @FuncionalidadAuth('crear-categoria')
-  create(@Body() createCategoriaDto: CreateCategoriaDto) {
-    return this.categoriaService.create(createCategoriaDto);
+  @TenantFuncionalidadAuth('crear-categoria')
+  create(
+    @GetTenantId() tenantId: string,
+    @Body() createCategoriaDto: CreateCategoriaDto
+  ) {
+    return this.categoriaService.create(tenantId, createCategoriaDto);
   }
 
   @Get('findAll')
-  @FuncionalidadAuth('obtener-categorias')
-  findAll() {
-    return this.categoriaService.findAll();
+  @TenantFuncionalidadAuth('obtener-categorias')
+  findAll(@GetTenantId() tenantId: string) {
+    return this.categoriaService.findAll(tenantId);
   }
 
   @Get(':id')
-  @FuncionalidadAuth('obtener-categoria')
-  findOne(@Param('id') id: string) {
-    return this.categoriaService.findOne(id);
+  @TenantFuncionalidadAuth('obtener-categoria')
+  findOne(
+    @GetTenantId() tenantId: string,
+    @Param('id') id: string
+  ) {
+    return this.categoriaService.findOne(tenantId, id);
   }
 
   @Patch('actualizar/:id')
-  @FuncionalidadAuth('actualizar-categoria')
-  update(@Param('id') id: string, @Body() updateCategoriaDto: UpdateCategoryDto) {
-    return this.categoriaService.update(id, updateCategoriaDto);
+  @TenantFuncionalidadAuth('actualizar-categoria')
+  update(
+    @GetTenantId() tenantId: string,
+    @Param('id') id: string, 
+    @Body() updateCategoriaDto: UpdateCategoryDto
+  ) {
+    return this.categoriaService.update(tenantId, id, updateCategoriaDto);
   }
 
   @Delete('eliminar/:id')
-  @FuncionalidadAuth('eliminar-categoria')
-  remove(@Param('id') id: string) {
-    return this.categoriaService.remove(id);
+  @TenantFuncionalidadAuth('eliminar-categoria')
+  remove(
+    @GetTenantId() tenantId: string,
+    @Param('id') id: string
+  ) {
+    return this.categoriaService.remove(tenantId, id);
   }
 }

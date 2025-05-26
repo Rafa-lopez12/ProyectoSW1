@@ -5,6 +5,7 @@ import { CarritoController } from './carrito.controller';
 import { Carrito } from './entities/carrito.entity';
 import { ClienteModule } from '../cliente/cliente.module';
 import { ProductoModule } from '../producto/producto.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   controllers: [CarritoController],
@@ -12,7 +13,8 @@ import { ProductoModule } from '../producto/producto.module';
   imports: [
     TypeOrmModule.forFeature([Carrito]),
     ClienteModule, 
-    ProductoModule 
+    ProductoModule,
+    AuthModule
   ],
   exports: [CarritoService, TypeOrmModule]
 })

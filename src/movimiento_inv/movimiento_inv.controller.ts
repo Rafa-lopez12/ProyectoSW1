@@ -1,37 +1,67 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe } from '@nestjs/common';
 import { MovimientoInvService } from './movimiento_inv.service';
 import { CreateMovimientoInvDto } from './dto/create-movimiento_inv.dto';
 import { UpdateMovimientoInvDto } from './dto/update-movimiento_inv.dto';
-import { FuncionalidadAuth } from 'src/auth/decorators/funcionalidad-auth.decorator';
+import { TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
+import { GetTenantId } from '../common/decorators/get-tenant.decorator';
 
 @Controller('movimiento-inv')
 export class MovimientoInvController {
   constructor(private readonly movimientoInvService: MovimientoInvService) {}
 
   @Post()
-  @FuncionalidadAuth('crear-movimientoInv')
-  create(@Body() createMovimientoInvDto: CreateMovimientoInvDto) {
-    return this.movimientoInvService.create(createMovimientoInvDto);
+  @TenantFuncionalidadAuth('crear-movimientoInv')
+  create(
+    @GetTenantId() tenantId: string,
+    @Body() createMovimientoInvDto: CreateMovimientoInvDto
+  ) {
+    return this.movimientoInvService.create(tenantId, createMovimientoInvDto);
   }
 
   @Get()
-  @FuncionalidadAuth('obtener-movimientosInv')
-  findAll() {
-    return this.movimientoInvService.findAll();
+  @TenantFuncionalidadAuth('obtener-movimientosInv')
+  findAll(@GetTenantId() tenantId: string) {
+    return this.movimientoInvService.findAll(tenantId);
+  }
+
+  @Get('proveedor/:proveedorId')
+  @TenantFuncionalidadAuth('obtener-movimientosInv')
+  findByProveedor(
+    @GetTenantId() tenantId: string,
+    @Param('proveedorId', ParseUUIDPipe) proveedorId: string
+  ) {
+    return this.movimientoInvService.findByProveedor(tenantId, proveedorId);
+  }
+
+  @Get('usuario/:usuarioId')
+  @TenantFuncionalidadAuth('obtener-movimientosInv')
+  findByUsuario(
+    @GetTenantId() tenantId: string,
+    @Param('usuarioId', ParseUUIDPipe) usuarioId: string
+  ) {
+    return this.movimientoInvService.findByUsuario(tenantId, usuarioId);
+  }
+
+  @Get('fecha-rango')
+  @TenantFuncionalidadAuth('obtener-movimientosInv')
+  findByDateRange(
+    @GetTenantId() tenantId: string,
+    @Query('fechaInicio') fechaInicio: string,
+    @Query('fechaFin') fechaFin: string
+  ) {
+    return this.movimientoInvService.findByDateRange(
+      tenantId,
+      new Date(fechaInicio),
+      new Date(fechaFin)
+    );
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.movimientoInvService.findOne(id);
+  @TenantFuncionalidadAuth('obtener-movimientoInv')
+  findOne(
+    @GetTenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    return this.movimientoInvService.findOne(tenantId, id);
   }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateMovimientoInvDto: UpdateMovimientoInvDto) {
-  //   return this.movimientoInvService.update(id, updateMovimientoInvDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.movimientoInvService.remove(id);
-  // }
 }
