@@ -1,99 +1,246 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 1 
+npm install
+o
+yarn install
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+# 2
+docker-compose up -d 
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+# 3
+crear el .env
 
-## Description
+DB_PASSWORD=
+DB_NAME=
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=
+PORT=3000
+HOST_API=http://localhost:3000/api
+JWT_SECRET=
+JWR_SECRET_CLIENTE=
+OPENAI_API_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+# 4
 
-## Project setup
+Desarrollo
+npm run start:dev
 
-```bash
-$ npm install
-```
+ Producción
+npm run build
+npm run start:prod
 
-## Compile and run the project
 
-```bash
-# development
-$ npm run start
 
-# watch mode
-$ npm run start:dev
+src/
+├── ai-search/           # Búsqueda de productos con IA
+├── auth/               # Autenticación de administradores
+├── carrito/            # Gestión del carrito de compras
+├── categoria/          # Gestión de categorías
+├── cliente/            # Autenticación y gestión de clientes
+├── common/             # Utilidades comunes, decoradores, middleware
+├── funcionalidad/      # Sistema de permisos granulares
+├── movimiento_inv/     # Movimientos de inventario
+├── producto/           # Gestión de productos y variantes
+├── proveedor/          # Gestión de proveedores
+├── rol/                # Gestión de roles
+├── size/               # Gestión de tallas
+├── stripe/             # Integración con Stripe
+├── tenant/             # Gestión multi-tenant
+├── venta/              # Gestión de ventas
+└── main.ts             # Punto de entrada
 
-# production mode
-$ npm run start:prod
-```
 
-## Run tests
 
-```bash
-# unit tests
-$ npm run test
+# 5
+crear un  tenant
 
-# e2e tests
-$ npm run test:e2e
+insert into tenant(nombre,subdominio,plan) values('Mi tienda', 'mitienda', 'basic')
 
-# test coverage
-$ npm run test:cov
-```
+POST /api/tenant  //algo falla creo xd
+Content-Type: application/json
 
-## Deployment
+{
+  "nombre": "Mi Tienda Test",
+  "subdominio": "mitienda",
+  "plan": "basic"
+}
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+# 6
+para todas las rutas (excepto las publicas) incluir:
+X-Tenant-ID: mitienda
+Authorization: Bearer <jwt_token>
 
-```bash
-$ npm install -g mau
-$ mau deploy
-```
+# 7
+crear las funcionalidades del sistema
+INSERT INTO funcionalidad (nombre, "tenantId") VALUES 
+-- Gestión de usuarios y roles
+('crear-usuario', 'UUID_DEL_TENANT'),
+('obtener-usuarios', 'UUID_DEL_TENANT'),
+('actualizar-usuario', 'UUID_DEL_TENANT'),
+('desactivar-usuario', 'UUID_DEL_TENANT'),
+('crear-rol', 'UUID_DEL_TENANT'),
+('obtener-roles', 'UUID_DEL_TENANT'),
+('actualizar-rol', 'UUID_DEL_TENANT'),
+('eliminar-rol', 'UUID_DEL_TENANT'),
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+-- Gestión de productos
+('crear-producto', 'UUID_DEL_TENANT'),
+('obtener-productos', 'UUID_DEL_TENANT'),
+('obtener-producto', 'UUID_DEL_TENANT'),
+('actualizar-producto', 'UUID_DEL_TENANT'),
+('eliminar-producto', 'UUID_DEL_TENANT'),
 
-## Resources
+-- Gestión de categorías
+('crear-categoria', 'UUID_DEL_TENANT'),
+('obtener-categorias', 'UUID_DEL_TENANT'),
+('obtener-categoria', 'UUID_DEL_TENANT'),
+('actualizar-categoria', 'UUID_DEL_TENANT'),
+('eliminar-categoria', 'UUID_DEL_TENANT'),
 
-Check out a few resources that may come in handy when working with NestJS:
+-- Gestión de tallas
+('crear-size', 'UUID_DEL_TENANT'),
+('obtener-sizes', 'UUID_DEL_TENANT'),
+('obtener-size', 'UUID_DEL_TENANT'),
+('actualizar-size', 'UUID_DEL_TENANT'),
+('eliminar-size', 'UUID_DEL_TENANT'),
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+-- Gestión de proveedores
+('crear-proveedor', 'UUID_DEL_TENANT'),
+('obtener-proveedores', 'UUID_DEL_TENANT'),
+('obtener-proveedor', 'UUID_DEL_TENANT'),
+('actualizar-proveedor', 'UUID_DEL_TENANT'),
+('desactivar-proveedor', 'UUID_DEL_TENANT'),
+('activar-proveedor', 'UUID_DEL_TENANT'),
 
-## Support
+-- Gestión de inventario
+('crear-movimientoInv', 'UUID_DEL_TENANT'),
+('obtener-movimientosInv', 'UUID_DEL_TENANT'),
+('obtener-movimientoInv', 'UUID_DEL_TENANT'),
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+-- Gestión de ventas
+('crear-venta', 'UUID_DEL_TENANT'),
+('obtener-ventas', 'UUID_DEL_TENANT'),
+('obtener-venta', 'UUID_DEL_TENANT'),
+('actualizar-estado-venta', 'UUID_DEL_TENANT'),
+('obtener-reportes-ventas', 'UUID_DEL_TENANT'),
 
-## Stay in touch
+-- Gestión de carritos (admin)
+('obtener-carritos', 'UUID_DEL_TENANT'),
+('obtener-estadisticas-carritos', 'UUID_DEL_TENANT'),
+('obtener-carrito-cliente', 'UUID_DEL_TENANT'),
+('vaciar-carrito-cliente', 'UUID_DEL_TENANT'),
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+-- Gestión de clientes (admin)
+('obtener-clientes', 'UUID_DEL_TENANT'),
+('obtener-cliente', 'UUID_DEL_TENANT'),
+('actualizar-cliente', 'UUID_DEL_TENANT'),
+('desactivar-cliente', 'UUID_DEL_TENANT'),
+('activar-cliente', 'UUID_DEL_TENANT'),
 
-## License
+-- Gestión de pagos
+('obtener-pagos', 'UUID_DEL_TENANT'),
+('obtener-pago', 'UUID_DEL_TENANT'),
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+-- Búsqueda con IA
+('buscar-productos-ia', 'UUID_DEL_TENANT');
+
+
+# 8
+crear el rol
+
+insert into rol('nombre') values('admin')
+
+# 9
+
+asignar funcionalidades al rol
+INSERT INTO rol_funcionalidades_funcionalidad ("rolId", "funcionalidadId") VALUES
+('ROL_UUID_AQUI', 1),
+('ROL_UUID_AQUI', 2),
+('ROL_UUID_AQUI', 3),
+('ROL_UUID_AQUI', 4),
+('ROL_UUID_AQUI', 5),
+('ROL_UUID_AQUI', 6),
+('ROL_UUID_AQUI', 7),
+('ROL_UUID_AQUI', 8),
+('ROL_UUID_AQUI', 9),
+('ROL_UUID_AQUI', 10),
+('ROL_UUID_AQUI', 11),
+('ROL_UUID_AQUI', 12),
+('ROL_UUID_AQUI', 13),
+('ROL_UUID_AQUI', 14),
+('ROL_UUID_AQUI', 15),
+('ROL_UUID_AQUI', 16),
+('ROL_UUID_AQUI', 17),
+('ROL_UUID_AQUI', 18),
+('ROL_UUID_AQUI', 19),
+('ROL_UUID_AQUI', 20),
+('ROL_UUID_AQUI', 21),
+('ROL_UUID_AQUI', 22),
+('ROL_UUID_AQUI', 23),
+('ROL_UUID_AQUI', 24),
+('ROL_UUID_AQUI', 25),
+('ROL_UUID_AQUI', 26),
+('ROL_UUID_AQUI', 27),
+('ROL_UUID_AQUI', 28),
+('ROL_UUID_AQUI', 29),
+('ROL_UUID_AQUI', 30),
+('ROL_UUID_AQUI', 31),
+('ROL_UUID_AQUI', 32),
+('ROL_UUID_AQUI', 33),
+('ROL_UUID_AQUI', 34),
+('ROL_UUID_AQUI', 35),
+('ROL_UUID_AQUI', 36),
+('ROL_UUID_AQUI', 37),
+('ROL_UUID_AQUI', 38),
+('ROL_UUID_AQUI', 39),
+('ROL_UUID_AQUI', 40),
+('ROL_UUID_AQUI', 41),
+('ROL_UUID_AQUI', 42),
+('ROL_UUID_AQUI', 43),
+('ROL_UUID_AQUI', 44),
+('ROL_UUID_AQUI', 45),
+('ROL_UUID_AQUI', 46),
+('ROL_UUID_AQUI', 47);
+
+
+# 10
+crear un usuario con este rol
+
+POST /api/auth/register
+Headers: X-Tenant-ID: mitienda
+Content-Type: application/json
+
+{
+  "email": "admin@mitienda.com",
+  "password": "Admin123!",
+  "fullName": "Administrador Principal",
+  "rolId": "UUID_DEL_ROL_ADMINISTRADOR"
+}
+
+
+# 11
+POST /api/auth/login
+Headers: X-Tenant-ID: mitienda
+Content-Type: application/json
+
+{
+  "email": "admin@mitienda.com",
+  "password": "Admin123!"
+}
+
+
+
+con todo eso deberias poder hacer pruebas, sino habla a rafa xd
+
+
+
+
+
+
+
+
+
+

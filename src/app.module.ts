@@ -66,6 +66,6 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(TenantMiddleware)
-      .forRoutes('*'); // Aplicar a todas las rutas
+      .forRoutes('*');
   }
 }
