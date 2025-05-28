@@ -4,9 +4,6 @@ o
 yarn install
 
 # 2
-docker-compose up -d 
-
-# 3
 crear el .env
 
 DB_PASSWORD=
@@ -21,6 +18,10 @@ JWR_SECRET_CLIENTE=
 OPENAI_API_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_PUBLISHABLE_KEY=
+
+
+# 3
+docker-compose up -d 
 
 # 4
 
