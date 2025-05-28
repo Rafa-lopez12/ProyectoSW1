@@ -33,12 +33,14 @@ export class CarritoService extends TenantBaseService<Carrito> {
     if (!cliente) {
       throw new NotFoundException(`Cliente con ID ${clienteId} no encontrado en este tenant`);
     }
+    console.log(productoVariedadId)
 
     // Verificar que la variedad del producto existe y pertenece al tenant
     const productoVariedad = await this.productoVariedadRepository.findOne({
       where: { Id: productoVariedadId, tenantId },
       relations: ['size', 'producto']
     });
+    console.log(productoVariedad)
 
     if (!productoVariedad) {
       throw new NotFoundException(`Variedad de producto con ID ${productoVariedadId} no encontrada en este tenant`);

@@ -19,6 +19,7 @@ import { Tenant } from './tenant/entities/tenant.entity';
 import { TenantModule } from './tenant/tenant.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { AiSearchModule } from './ai-search/ai-search.module';
+import { StripeModule } from './stripe/stripe.module';
 
 
 
@@ -55,6 +56,7 @@ import { AiSearchModule } from './ai-search/ai-search.module';
     CarritoModule,
     TenantModule,
     AiSearchModule,
+    StripeModule,
     
   ],
   providers: [],
