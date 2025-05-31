@@ -49,6 +49,7 @@ export class StripeController {
     @GetCliente() cliente: Cliente,
     @Body() confirmPaymentDto: ConfirmPaymentDto
   ) {
+    console.log(confirmPaymentDto)
     return this.stripeService.confirmPayment(tenantId, cliente.id, confirmPaymentDto);
   }
 

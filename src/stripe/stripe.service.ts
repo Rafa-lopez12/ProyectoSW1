@@ -197,9 +197,7 @@ export class StripeService {
         }
 
         // Confirmar el pago en Stripe
-        const paymentIntent = await this.stripe.paymentIntents.confirm(paymentIntentId, {
-          payment_method: paymentMethodId,
-          return_url: `${this.configService.get('FRONTEND_URL')}/payment/success`,
+        const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId, {
           expand: ['charges']
         });
 
