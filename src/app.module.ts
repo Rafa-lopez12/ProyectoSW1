@@ -20,6 +20,7 @@ import { TenantModule } from './tenant/tenant.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { AiSearchModule } from './ai-search/ai-search.module';
 import { StripeModule } from './stripe/stripe.module';
+import { VirtualTryonModule } from './virtual-tryon/virtual-tryon.module';
 
 
 
@@ -57,6 +58,7 @@ import { StripeModule } from './stripe/stripe.module';
     TenantModule,
     AiSearchModule,
     StripeModule,
+    VirtualTryonModule,
     
   ],
   providers: [],
