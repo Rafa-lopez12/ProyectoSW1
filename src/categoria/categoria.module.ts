@@ -4,12 +4,14 @@ import { CategoriaController } from './categoria.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Categoria } from './entities/categoria.entity';
 import { AuthModule } from '../auth/auth.module';
+import { ClienteModule } from '../cliente/cliente.module';
 
 @Module({
   controllers: [CategoriaController],
   imports:[
     TypeOrmModule.forFeature([Categoria]),
-    AuthModule
+    AuthModule,
+    ClienteModule
   ],
   providers: [CategoriaService],
   exports:[CategoriaService]

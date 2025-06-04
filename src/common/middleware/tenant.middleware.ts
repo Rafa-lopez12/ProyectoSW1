@@ -52,30 +52,48 @@ export class TenantMiddleware implements NestMiddleware {
   }
 
   private extractTenantIdentifier(req: Request): string | null {
+    // Helper para detectar si es una IP
+    const isIpAddress = (hostname: string): boolean => {
+      const ipRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+      return ipRegex.test(hostname.split(':')[0]); // Remover puerto si existe
+    };
+  
     // 1. Desde subdominio (producción)
     const host = req.headers.host;
-    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
-      const subdomain = host.split('.')[0];
-      if (!['www', 'api', 'admin', 'app'].includes(subdomain)) {
-       
-        return subdomain;
+    if (host) {
+      const hostname = host.split(':')[0]; // Remover puerto
+      
+      // Skip si es IP, localhost, o nombres reservados
+      if (!hostname.includes('localhost') && 
+          !hostname.includes('127.0.0.1') &&
+          !isIpAddress(hostname) &&
+          !hostname.startsWith('192.168.') &&
+          !hostname.startsWith('10.') &&
+          !hostname.startsWith('172.')) {
+        
+        const subdomain = hostname.split('.')[0];
+        if (!['www', 'api', 'admin', 'app'].includes(subdomain)) {
+          
+          return subdomain;
+        }
       }
     }
-
-    // 2. Desde header (desarrollo)
+  
+    // 2. Desde header (desarrollo) - PRIORIDAD PARA DESARROLLO
     const headerTenant = req.headers['x-tenant-id'] as string;
     if (headerTenant) {
-      
+    
       return headerTenant;
     }
-
+  
     // 3. Desde query param (backup)
     const queryTenant = req.query.tenant as string;
     if (queryTenant) {
-      
+    
       return queryTenant;
     }
-
+  
+   
     return null;
   }
 

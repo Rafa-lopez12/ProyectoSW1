@@ -8,6 +8,7 @@ import { ProductoVariedad } from './entities/productoVariedad.entity';
 import { ProductoImage } from './entities/ProductoImagen.entity';
 import { SizeModule } from '../size/size.module';
 import { AuthModule } from '../auth/auth.module';
+import { ClienteModule } from '../cliente/cliente.module';
 
 @Module({
   controllers: [ProductoController],
@@ -15,7 +16,8 @@ import { AuthModule } from '../auth/auth.module';
     TypeOrmModule.forFeature([Producto, ProductoVariedad, ProductoImage]),
     CategoriaModule,
     SizeModule,
-  AuthModule
+    AuthModule,
+    ClienteModule
   ],
   providers: [ProductoService],
   exports:[ProductoService, TypeOrmModule]

@@ -276,4 +276,6 @@ export class ProductoService extends TenantBaseService<Producto> {
     console.error(error);
     throw new BadRequestException('Unexpected error, check server logs');
   }
+
+
 }

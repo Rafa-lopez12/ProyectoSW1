@@ -3,7 +3,7 @@ import { CategoriaService } from './categoria.service';
 import { CreateCategoriaDto } from './dto/create-categoria.dto';
 import { UpdateCategoryDto } from './dto/update-categoria.dto';
 import { GetTenantId } from '../common/decorators/get-tenant.decorator';
-import { TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
+import { ClienteTenantAuth, TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
 
 @Controller('categoria')
 export class CategoriaController {
@@ -50,5 +50,11 @@ export class CategoriaController {
     @Param('id') id: string
   ) {
     return this.categoriaService.remove(tenantId, id);
+  }
+
+  @Get('findAlll')
+  @ClienteTenantAuth()
+  findAlll(@GetTenantId() tenantId:string){
+    return this.categoriaService.findAll(tenantId);
   }
 }

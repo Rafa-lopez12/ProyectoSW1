@@ -5,7 +5,7 @@ import { UpdateProductoDto } from './dto/update-producto.dto';
 import { Funcionalidad } from '../auth/decorators/funcionalidad.decorator';
 import { ProductFilterInterface } from './interface/product-filter.interface';
 import { GetTenantId } from '../common/decorators/get-tenant.decorator';
-import { TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
+import { ClienteTenantAuth, TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
 
 @Controller('producto')
 export class ProductoController {
@@ -58,7 +58,7 @@ export class ProductoController {
   }
 
   @Get('category/:categoryId')
-  findByCategory(
+  findByCategoryy(
     @GetTenantId() tenantId: string,
     @Param('categoryId') categoryId: string
   ) {
@@ -66,13 +66,103 @@ export class ProductoController {
   }
   
   @Get('subcategory/:subcategory')
-  findBySubcategory(
+  findBySubcategoryy(
     @GetTenantId() tenantId: string,
     @Param('subcategory') subcategory: string
   ) {
     return this.productoService.findBySubcategory(tenantId, subcategory);
   }
+
+
+  @Get('findAlll')
+  @ClienteTenantAuth()
+  findAlll(
+    @GetTenantId() tenantId: string,
+    @Query() filters: ProductFilterInterface
+  ) {
+    return this.productoService.findAll(tenantId, filters);
+  }
+
+  @Get('obtener/:id')
+  @ClienteTenantAuth()
+  findOnee(
+    @GetTenantId() tenantId: string,
+    @Param('id') id: string
+  ) {
+    return this.productoService.findOne(tenantId, id);
+  }
+
+
+  // @Get('catalog')
+  // @ClienteTenantAuth()
+  // findAllPublic(
+  //   @GetTenantId() tenantId: string,
+  //   @Query() filters: ProductFilterInterface
+  // ) {
+  //   // Solo mostrar productos activos en el catálogo público
+  //   const publicFilters = { ...filters, active: true };
+  //   return this.productoService.findAllForCatalog(tenantId, publicFilters);
+  // }
+
+  // @Get('catalog/:id')
+  // @ClienteTenantAuth()
+  // findOnePublic(
+  //   @GetTenantId() tenantId: string,
+  //   @Param('id') id: string
+  // ) {
+  //   return this.productoService.findOneForCatalog(tenantId, id);
+  // }
+
+  // @Get('catalog/category/:categoryId')
+  // @ClienteTenantAuth()
+  // findByCategoryPublic(
+  //   @GetTenantId() tenantId: string,
+  //   @Param('categoryId') categoryId: string
+  // ) {
+  //   return this.productoService.findByCategoryForCatalog(tenantId, categoryId);
+  // }
+  
+  // @Get('catalog/subcategory/:subcategory')
+  // @ClienteTenantAuth()
+  // findBySubcategoryPublic(
+  //   @GetTenantId() tenantId: string,
+  //   @Param('subcategory') subcategory: string
+  // ) {
+  //   return this.productoService.findBySubcategoryForCatalog(tenantId, subcategory);
+  // }
+
+  // @Get('catalog/search')
+  // @ClienteTenantAuth()
+  // searchPublic(
+  //   @GetTenantId() tenantId: string,
+  //   @Query('q') searchTerm: string,
+  //   @Query() filters: ProductFilterInterface
+  // ) {
+  //   const searchFilters = { ...filters, search: searchTerm, active: true };
+  //   return this.productoService.findAllForCatalog(tenantId, searchFilters);
+  // }
+
+  // =================== RUTAS ADMINISTRATIVAS EXISTENTES ===================
+  
+  // @Get('category/:categoryId')
+  // @TenantFuncionalidadAuth('obtener-productos')
+  // findByCategory(
+  //   @GetTenantId() tenantId: string,
+  //   @Param('categoryId') categoryId: string
+  // ) {
+  //   return this.productoService.findByCategory(tenantId, categoryId);
+  // }
+  
+  // @Get('subcategory/:subcategory')
+  // @TenantFuncionalidadAuth('obtener-productos')
+  // findBySubcategory(
+  //   @GetTenantId() tenantId: string,
+  //   @Param('subcategory') subcategory: string
+  // ) {
+  //   return this.productoService.findBySubcategory(tenantId, subcategory);
+  // }
 }
+
 
 
 
