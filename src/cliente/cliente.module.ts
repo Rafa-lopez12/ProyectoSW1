@@ -8,7 +8,7 @@ import { ClienteAuthService } from './cliente.service';
 import { ClienteAuthController } from './cliente.controller';
 import { Cliente } from './entities/cliente.entity';
 import { ClienteJwtStrategy } from './strategies/cliente-jwt.strategy';
-import { AuthModule } from '../auth/auth.module';
+import { ProductoModule } from '../producto/producto.module';
 
 @Module({
   controllers: [ClienteAuthController],
@@ -31,8 +31,6 @@ import { AuthModule } from '../auth/auth.module';
         }
       }
     }),
-    
-    AuthModule // Para acceder a funcionalidades administrativas
   ],
   exports: [
     TypeOrmModule,

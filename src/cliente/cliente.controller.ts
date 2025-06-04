@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, Query } from '@nestjs/common';
 import { ClienteAuthService } from './cliente.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
-import { ClienteAuth } from './decorators/cliente-auth.decorator';
 import { GetCliente } from './decorators/get-cliente.decorator';
 import { LoginClienteDto } from './dto/loginCli.dto';
 import { Cliente } from './entities/cliente.entity';
@@ -62,49 +61,52 @@ export class ClienteAuthController {
     return this.clienteAuthService.checkAuthStatus(cliente);
   }
 
+
+
+
   // =================== RUTAS ADMINISTRATIVAS ===================
 
-  @Get('admin/all')
-  @TenantFuncionalidadAuth('obtener-clientes')
-  findAllClients(@GetTenantId() tenantId: string) {
-    return this.clienteAuthService.findAll(tenantId);
-  }
+  // @Get('admin/all')
+  // @TenantFuncionalidadAuth('obtener-clientes')
+  // findAllClients(@GetTenantId() tenantId: string) {
+  //   return this.clienteAuthService.findAll(tenantId);
+  // }
 
-  @Get('admin/:id')
-  @TenantFuncionalidadAuth('obtener-cliente')
-  findOneClient(
-    @GetTenantId() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string
-  ) {
-    return this.clienteAuthService.findOne(tenantId, id);
-  }
+  // @Get('admin/:id')
+  // @TenantFuncionalidadAuth('obtener-cliente')
+  // findOneClient(
+  //   @GetTenantId() tenantId: string,
+  //   @Param('id', ParseUUIDPipe) id: string
+  // ) {
+  //   return this.clienteAuthService.findOne(tenantId, id);
+  // }
 
-  @Patch('admin/:id')
-  @TenantFuncionalidadAuth('actualizar-cliente')
-  updateClient(
-    @GetTenantId() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateClienteDto: UpdateClienteDto
-  ) {
-    return this.clienteAuthService.update(tenantId, id, updateClienteDto);
-  }
+  // @Patch('admin/:id')
+  // @TenantFuncionalidadAuth('actualizar-cliente')
+  // updateClient(
+  //   @GetTenantId() tenantId: string,
+  //   @Param('id', ParseUUIDPipe) id: string,
+  //   @Body() updateClienteDto: UpdateClienteDto
+  // ) {
+  //   return this.clienteAuthService.update(tenantId, id, updateClienteDto);
+  // }
 
-  @Patch('admin/:id/deactivate')
-  @TenantFuncionalidadAuth('desactivar-cliente')
-  deactivateClient(
-    @GetTenantId() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string
-  ) {
-    return this.clienteAuthService.deactivate(tenantId, id);
-  }
+  // @Patch('admin/:id/deactivate')
+  // @TenantFuncionalidadAuth('desactivar-cliente')
+  // deactivateClient(
+  //   @GetTenantId() tenantId: string,
+  //   @Param('id', ParseUUIDPipe) id: string
+  // ) {
+  //   return this.clienteAuthService.deactivate(tenantId, id);
+  // }
 
-  @Patch('admin/:id/activate')
-  @TenantFuncionalidadAuth('activar-cliente')
-  activateClient(
-    @GetTenantId() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string
-  ) {
-    return this.clienteAuthService.activate(tenantId, id);
-  }
+  // @Patch('admin/:id/activate')
+  // @TenantFuncionalidadAuth('activar-cliente')
+  // activateClient(
+  //   @GetTenantId() tenantId: string,
+  //   @Param('id', ParseUUIDPipe) id: string
+  // ) {
+  //   return this.clienteAuthService.activate(tenantId, id);
+  // }
 }
 

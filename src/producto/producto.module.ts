@@ -17,7 +17,6 @@ import { ClienteModule } from '../cliente/cliente.module';
     CategoriaModule,
     SizeModule,
     AuthModule,
-    ClienteModule
   ],
   providers: [ProductoService],
   exports:[ProductoService, TypeOrmModule]
