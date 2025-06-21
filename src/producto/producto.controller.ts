@@ -73,6 +73,25 @@ export class ProductoController {
     return this.productoService.findBySubcategory(tenantId, subcategory);
   }
 
+
+  @Get('tienda/findAll')
+  @ClienteTenantAuth()
+  findAllStore(
+  @GetTenantId() tenantId: string,
+  @Query() filters: ProductFilterInterface
+  ) {
+  return this.productoService.findAll(tenantId, filters);
+  }
+
+@Get('tienda/:id')
+@ClienteTenantAuth()
+findOneStore(
+  @GetTenantId() tenantId: string,
+  @Param('id') id: string
+) {
+  return this.productoService.findOne(tenantId, id);
+}
+
 }
 
 

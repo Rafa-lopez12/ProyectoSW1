@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Req, Headers, SetMetadata } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req, Headers, SetMetadata, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { IncomingHttpHeaders } from 'http';
 
@@ -46,51 +46,49 @@ export class AuthController {
     return this.authService.checkAuthStatus(user);
   }
 
-  @Get('private')
-  @UseGuards(AuthGuard())
-  testingPrivateRoute(
-    @Req() request: Express.Request,
-    @GetUser() user: User,
-    @GetUser('email') userEmail: string,
-    @RawHeaders() rawHeaders: string[],
-    @Headers() headers: IncomingHttpHeaders,
-  ) {
-    return {
-      ok: true,
-      message: 'Hola Mundo Private',
-      user,
-      userEmail,
-      rawHeaders,
-      headers
-    }
+  @Get('users')
+  @TenantFuncionalidadAuth('obtener-usuarios')
+  getAllUsers(@GetTenantId() tenantId: string) {
+    return this.authService.getAll(tenantId);
   }
 
-  @Get('private2')
-  @RoleProtected(ValidRoles.superUser, ValidRoles.admin)
-  @UseGuards(AuthGuard(), UserRoleGuard)
-  privateRoute2(
-    @GetUser() user: User
+  @Get('users/:id')
+  @TenantFuncionalidadAuth('obtener-usuario')
+  getUser(
+    @GetTenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string
   ) {
-    return {
-      ok: true,
-      user
-    }
+    return this.authService.findOne(tenantId, id);
   }
 
-  @Get('private3')
-  privateRoute3(
-    @GetUser() user: User
+  @Patch('users/:id')
+  @TenantFuncionalidadAuth('actualizar-usuario')
+  updateUser(
+    @GetTenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateData: Partial<CreateUserDto>
   ) {
-    return {
-      ok: true,
-      user
-    }
+    return this.authService.update(tenantId, id, updateData);
   }
 
-  @Get('prueba')
-  @FuncionalidadAuth('prueba')
-  prueba(){
-    return 'ok'
+  @Patch('users/:id/deactivate')
+  @TenantFuncionalidadAuth('desactivar-usuario')
+  deactivateUser(
+    @GetTenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    return this.authService.deactivate(tenantId, id);
   }
+
+  @Patch('users/:id/activate')
+  @TenantFuncionalidadAuth('activar-usuario')
+  activateUser(
+    @GetTenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    return this.authService.activate(tenantId, id);
+  }
+
+
 }
 

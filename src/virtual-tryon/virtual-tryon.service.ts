@@ -176,21 +176,20 @@ export class VirtualTryonService {
   private async processVirtualTryon(sessionId: string): Promise<void> {
     try {
       this.logger.log(`Iniciando procesamiento de try-on para sesión ${sessionId}`);
-
-      // Actualizar estado a processing
+  
       await this.tryonSessionRepository.update(sessionId, { 
         status: 'processing' 
       });
-
+  
       const session = await this.tryonSessionRepository.findOne({
         where: { id: sessionId }
       });
-
+  
       if (!session) {
         throw new Error('Sesión no encontrada');
       }
-
-      // MÉTODO 1: Uso directo con .run() (más simple)
+  
+      // MÉTODO CORREGIDO para manejar streams
       try {
         const output = await this.replicate.run(
           "cuuupid/idm-vton:906425dbca90663ff5427624839572cc56ea7d380343d13e2a4c4b09d3f0c30f",
@@ -202,20 +201,75 @@ export class VirtualTryonService {
             }
           }
         );
-
-        this.logger.log(`Try-on completado para sesión ${sessionId}:`, output);
-
-        // Actualizar sesión con resultado
-        await this.tryonSessionRepository.update(sessionId, {
-          status: 'completed',
-          resultImageUrl: Array.isArray(output) ? output[0] : output,
-          replicateId: 'completed'
-        });
-
+  
+        this.logger.log(`🔍 Tipo de output recibido:`, typeof output);
+        this.logger.log(`🔍 Output es ReadableStream?:`, output instanceof ReadableStream);
+  
+        let resultUrl: string | null = null;
+  
+        // CASO 1: Si es un ReadableStream, procesarlo
+        if (output instanceof ReadableStream) {
+          this.logger.log(`📸 Procesando ReadableStream...`);
+          
+          // Convertir stream a buffer
+          const reader = output.getReader();
+          const chunks: Uint8Array[] = [];
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+          
+          // Combinar chunks
+          const buffer = Buffer.concat(chunks);
+          
+          // Guardar como archivo temporal y crear URL pública
+          const fileName = `result_${sessionId}_${Date.now()}.jpg`;
+          const uploadDir = this.configService.get<string>('UPLOAD_DIR') || './public/uploads';
+          const filePath = path.join(uploadDir, fileName);
+          
+          // Escribir archivo
+          fs.writeFileSync(filePath, buffer);
+          
+          // Crear URL pública
+          const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3000';
+          resultUrl = `${baseUrl}/uploads/${fileName}`;
+          
+          this.logger.log(`✅ Imagen guardada como: ${resultUrl}`);
+        }
+        // CASO 2: Si es un array con URLs
+        else if (Array.isArray(output)) {
+          resultUrl = output[0];
+          this.logger.log(`📸 URL desde array: ${resultUrl}`);
+        }
+        // CASO 3: Si es string directo
+        else if (typeof output === 'string') {
+          resultUrl = output;
+          this.logger.log(`📸 URL directa: ${resultUrl}`);
+        }
+        // CASO 4: Formato desconocido
+        else {
+          this.logger.warn(`⚠️ Formato no reconocido:`, output);
+          resultUrl = null;
+        }
+  
+        if (resultUrl) {
+          await this.tryonSessionRepository.update(sessionId, {
+            status: 'completed',
+            resultImageUrl: resultUrl,
+            replicateId: 'completed'
+          });
+          
+          this.logger.log(`🎉 Try-on completado exitosamente! URL: ${resultUrl}`);
+        } else {
+          throw new Error('No se pudo extraer URL del resultado');
+        }
+  
       } catch (replicateError) {
-        this.logger.warn('Método directo falló, intentando con predictions.create');
+        this.logger.error('Error con Replicate:', replicateError);
         
-        // MÉTODO 2: Usar predictions.create() si el método directo falla
+        // Fallback: usar predictions.create
         const prediction = await this.replicate.predictions.create({
           version: "906425dbca90663ff5427624839572cc56ea7d380343d13e2a4c4b09d3f0c30f",
           input: {
@@ -224,16 +278,15 @@ export class VirtualTryonService {
             garment_des: "high quality garment"
           }
         });
-
-        // Guardar ID de predicción para seguimiento
+  
         await this.tryonSessionRepository.update(sessionId, {
           replicateId: prediction.id
         });
-
+  
         // Polling para verificar estado
         await this.pollPredictionStatus(sessionId, prediction.id);
       }
-
+  
     } catch (error) {
       this.logger.error(`Error procesando try-on para sesión ${sessionId}:`, error);
       
@@ -362,4 +415,60 @@ export class VirtualTryonService {
 
     return this.getSessionStatus(tenantId, clienteId, sessionId);
   }
+
+
+  async verifyReplicateAccount(): Promise<any> {
+    try {
+      this.logger.log('🔍 Verificando estado de cuenta Replicate...');
+      
+      // Verificar que el token funciona
+      const account = await this.replicate.accounts.current();
+      this.logger.log('✅ Cuenta verificada:', account);
+  
+      // Probar con una predicción simple y barata
+      const testPrediction = await this.replicate.predictions.create({
+        version: "ac732df83cea7fff18b8472768c88ad041fa750ff7682a21affe81863cbe77e4", // modelo muy barato para pruebas
+        input: {
+          prompt: "test"
+        }
+      });
+  
+      this.logger.log('✅ Test prediction creada:', testPrediction.id);
+  
+      return {
+        accountVerified: true,
+        username: account.username,
+        testPredictionId: testPrediction.id,
+        message: 'Cuenta Replicate funcionando correctamente'
+      };
+  
+    } catch (error) {
+      this.logger.error('❌ Error verificando cuenta Replicate:', error);
+  
+      // Analizar el tipo de error
+      if (error.message?.includes('402')) {
+        return {
+          accountVerified: false,
+          error: 'Billing still not enabled - wait 5-15 more minutes',
+          message: 'La facturación aún no está activa. Espera unos minutos más.'
+        };
+      }
+  
+      if (error.message?.includes('401')) {
+        return {
+          accountVerified: false,
+          error: 'Invalid API token',
+          message: 'Token de API inválido. Verifica tu REPLICATE_API_TOKEN'
+        };
+      }
+  
+      return {
+        accountVerified: false,
+        error: error.message,
+        message: 'Error desconocido verificando cuenta'
+      };
+    }
+  }
+
+
 }

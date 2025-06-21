@@ -57,6 +57,10 @@ export class TenantMiddleware implements NestMiddleware {
       const ipRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
       return ipRegex.test(hostname.split(':')[0]); // Remover puerto si existe
     };
+
+    const isNgrokDomain = (hostname: string): boolean => {
+      return hostname.includes('.ngrok.io') || hostname.includes('.ngrok-free.app');
+    };
   
     // 1. Desde subdominio (producción)
     const host = req.headers.host;
@@ -65,11 +69,12 @@ export class TenantMiddleware implements NestMiddleware {
       
       // Skip si es IP, localhost, o nombres reservados
       if (!hostname.includes('localhost') && 
-          !hostname.includes('127.0.0.1') &&
-          !isIpAddress(hostname) &&
-          !hostname.startsWith('192.168.') &&
-          !hostname.startsWith('10.') &&
-          !hostname.startsWith('172.')) {
+        !hostname.includes('127.0.0.1') &&
+        !isIpAddress(hostname) &&
+        !hostname.startsWith('192.168.') &&
+        !hostname.startsWith('10.') &&
+        !hostname.startsWith('172.') &&
+        !isNgrokDomain(hostname)){
         
         const subdomain = hostname.split('.')[0];
         if (!['www', 'api', 'admin', 'app'].includes(subdomain)) {

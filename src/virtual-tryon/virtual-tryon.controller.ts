@@ -23,6 +23,15 @@ export class VirtualTryonController {
 
   // =================== RUTAS PARA CLIENTES ===================
 
+  @Get('verify-account')
+@ClienteTenantAuth()
+async verifyAccount(
+  @GetTenantId() tenantId: string,
+  @GetCliente() cliente: Cliente
+) {
+  return this.virtualTryonService.verifyReplicateAccount();
+}
+
   @Post('create-from-urls')
   @ClienteTenantAuth()
   createFromUrls(

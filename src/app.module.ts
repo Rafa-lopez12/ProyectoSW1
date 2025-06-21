@@ -21,6 +21,8 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { AiSearchModule } from './ai-search/ai-search.module';
 import { StripeModule } from './stripe/stripe.module';
 import { VirtualTryonModule } from './virtual-tryon/virtual-tryon.module';
+import { RecommendationsModule } from './recommendation/recommendation.module';
+import { ReportesModule } from './reportes/reportes.module';
 
 
 
@@ -59,6 +61,8 @@ import { VirtualTryonModule } from './virtual-tryon/virtual-tryon.module';
     AiSearchModule,
     StripeModule,
     VirtualTryonModule,
+    RecommendationsModule,
+    ReportesModule,
     
   ],
   providers: [],

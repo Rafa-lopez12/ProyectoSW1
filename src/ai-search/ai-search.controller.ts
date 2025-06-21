@@ -13,7 +13,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AiSearchService } from './ai-search.service';
 import { GetTenantId } from '../common/decorators/get-tenant.decorator';
-import { TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
+import { ClienteTenantAuth, TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
 
 @Controller('ai-search')
 export class AiSearchController {
@@ -21,7 +21,7 @@ export class AiSearchController {
 
   @Post('search-by-image')
   @UseInterceptors(FileInterceptor('image'))
-  @TenantFuncionalidadAuth('buscar-productos-ia')
+  @ClienteTenantAuth()
   async searchByImage(
     @GetTenantId() tenantId: string,
     @UploadedFile(
