@@ -16,6 +16,7 @@ import { ValidRoles } from './interfaces/valid-roles';
 import { FuncionalidadAuth } from './decorators/funcionalidad-auth.decorator';
 import { TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
 import { GetTenantId } from '../common/decorators/get-tenant.decorator';
+import { CheckStatusDto } from '../virtual-tryon/dto/check-status.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -87,6 +88,12 @@ export class AuthController {
     @Param('id', ParseUUIDPipe) id: string
   ) {
     return this.authService.activate(tenantId, id);
+  }
+
+  @Get('checkstatus')
+  checkStatus(
+  ){
+    return this.authService.checkAuthStatus;
   }
 
 

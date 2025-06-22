@@ -96,7 +96,7 @@ export class VirtualTryonService {
   ): Promise<VirtualTryonSession> {
     try {
       const { userImageBase64, garmentImageBase64, productoId, metadata } = createTryonDto;
-
+  
       // Verificar cliente
       const cliente = await this.clienteRepository.findOne({
         where: { id: clienteId, tenantId }
@@ -104,7 +104,7 @@ export class VirtualTryonService {
       if (!cliente) {
         throw new NotFoundException('Cliente no encontrado');
       }
-
+  
       // Verificar producto si se proporciona
       let producto: Producto | null = null;
       if (productoId) {
@@ -115,17 +115,26 @@ export class VirtualTryonService {
           throw new NotFoundException('Producto no encontrado');
         }
       }
-
-      // Guardar imágenes base64 como archivos temporales
+  
       const uploadDir = this.configService.get<string>('UPLOAD_DIR') || './public/uploads';
-      const userImagePath = await this.saveBase64Image(userImageBase64, uploadDir, 'user');
-      const garmentImagePath = await this.saveBase64Image(garmentImageBase64, uploadDir, 'garment');
-
-      // URLs públicas (ajustar según tu configuración)
       const baseUrl = this.configService.get<string>('BASE_URL') || 'http://localhost:3000';
+  
+      // Procesar imagen del usuario (siempre base64)
+      const userImagePath = await this.saveBase64Image(userImageBase64, uploadDir, 'user');
       const userImageUrl = `${baseUrl}/uploads/${path.basename(userImagePath)}`;
-      const garmentImageUrl = `${baseUrl}/uploads/${path.basename(garmentImagePath)}`;
-
+  
+      // Procesar imagen de la prenda (puede ser base64 o URL)
+      let garmentImageUrl: string;
+      
+      if (garmentImageBase64.startsWith('http://') || garmentImageBase64.startsWith('https://')) {
+        // Es una URL, usarla directamente
+        garmentImageUrl = garmentImageBase64;
+      } else {
+        // Es base64, guardarla como archivo
+        const garmentImagePath = await this.saveBase64Image(garmentImageBase64, uploadDir, 'garment');
+        garmentImageUrl = `${baseUrl}/uploads/${path.basename(garmentImagePath)}`;
+      }
+  
       // Crear sesión
       const session = this.tryonSessionRepository.create({
         userImageUrl,
@@ -136,14 +145,14 @@ export class VirtualTryonService {
         status: 'pending',
         metadata
       });
-
+  
       const savedSession = await this.tryonSessionRepository.save(session);
-
-      // Ejecutar try-on en Replicate de forma asíncrona
+  
+     
       this.processVirtualTryon(savedSession.id);
-
+  
       return savedSession;
-
+  
     } catch (error) {
       this.logger.error('Error creando sesión de try-on desde base64:', error);
       throw new BadRequestException(`Error procesando try-on: ${error.message}`);

@@ -6,10 +6,10 @@ import {
   Param, 
   ParseUUIDPipe,
   UseInterceptors,
-  UploadedFiles,
-  BadRequestException
+  BadRequestException,
+  UploadedFile
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { VirtualTryonService } from './virtual-tryon.service';
 import { ClienteTenantAuth, TenantFuncionalidadAuth } from '../common/decorators/tenant-auth.decorator';
 import { GetTenantId } from '../common/decorators/get-tenant.decorator';
@@ -54,25 +54,31 @@ async verifyAccount(
 
   @Post('upload-and-create')
   @ClienteTenantAuth()
-  @UseInterceptors(FilesInterceptor('images', 2))
+  @UseInterceptors(FileInterceptor('images'))
   async uploadAndCreate(
     @GetTenantId() tenantId: string,
     @GetCliente() cliente: Cliente,
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFile() images: Express.Multer.File,
+    @Body('image') image: string,
     @Body('productoId') productoId?: string,
     @Body('metadata') metadata?: string
   ) {
-    if (!files || files.length !== 2) {
-      throw new BadRequestException('Se requieren exactamente 2 imágenes');
+    console.log(images)
+    console.log(image)
+    if (!images) {
+      throw new BadRequestException('Se requiere la imagen de la persona');
     }
 
-    // Convertir archivos a base64
-    const userImageBase64 = `data:${files[0].mimetype};base64,${files[0].buffer.toString('base64')}`;
-    const garmentImageBase64 = `data:${files[1].mimetype};base64,${files[1].buffer.toString('base64')}`;
+    if (!image) {
+      throw new BadRequestException('Se requiere la URL de la imagen de la prenda');
+    }
+
+    // Convertir imagen de persona a base64
+    const userImageBase64 = `data:${images.mimetype};base64,${images.buffer.toString('base64')}`;
 
     const createTryonDto: CreateTryonFromBase64Dto = {
       userImageBase64,
-      garmentImageBase64,
+      garmentImageBase64: image, // Ahora es URL directa
       productoId,
       metadata: metadata ? JSON.parse(metadata) : undefined
     };
