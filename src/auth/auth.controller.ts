@@ -90,11 +90,6 @@ export class AuthController {
     return this.authService.activate(tenantId, id);
   }
 
-  @Get('checkstatus')
-  checkStatus(
-  ){
-    return this.authService.checkAuthStatus;
-  }
 
 
 }

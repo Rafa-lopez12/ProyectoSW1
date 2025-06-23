@@ -97,29 +97,29 @@ export class RecommendationsService {
       .addSelect('SUM(detalle.cantidad)', 'totalVendido')
       .addSelect('COUNT(DISTINCT detalle.ventaId)', 'numeroVentas')
       .leftJoin('detalle.venta', 'venta')
-      .leftJoin('detalle.productoVariedad', 'variedad')
+      .leftJoin('detalle.productoVariedad', 'variedad') // variedad es alias para product_sizes
       .leftJoin('variedad.producto', 'producto')
       .where('detalle.tenantId = :tenantId', { tenantId })
       .andWhere('venta.estado = :estado', { estado: 'completada' })
       .andWhere('producto.isActive = true');
-
-    // Aplicar filtros de contexto
+  
+    // Aplicar filtros (ahora sabe que variedad existe)
     this.applyContextFilters(query, context);
-
+  
     const ventas = await query
       .groupBy('detalle.productoVariedadId')
-      .orderBy('totalVendido', 'DESC')
-      .addOrderBy('numeroVentas', 'DESC')
-      .limit(limit * 2) // Obtenemos más para tener opciones
+      .orderBy('"totalVendido"', 'DESC')
+      .addOrderBy('"numeroVentas"', 'DESC')
+      .limit(limit * 2)
       .getRawMany();
-
+  
     const recommendations = await this.buildRecommendationsFromSalesData(
       tenantId, 
       ventas, 
       'bestseller', 
       limit
     );
-
+  
     return {
       totalProducts: recommendations.length,
       categoriesAnalyzed: await this.countCategories(tenantId, context),
@@ -150,9 +150,9 @@ export class RecommendationsService {
       .andWhere('detalle.tenantId = :tenantId', { tenantId })
       .andWhere('venta.estado = :estado', { estado: 'completada' })
       .getRawMany();
-
+  
     const productosCompradosIds = productosComprados.map(p => p.id);
-
+  
     // Buscar productos similares basados en categorías preferidas
     const query = this.productoRepository
       .createQueryBuilder('producto')
@@ -165,33 +165,33 @@ export class RecommendationsService {
       .andWhere('producto.id NOT IN (:...excludeIds)', { 
         excludeIds: [...productosCompradosIds, ...(context.excludeProductIds || [])]
       });
-
+  
     // Filtrar por categorías preferidas del cliente
     if (clienteBehavior.preferredCategories.length > 0) {
       query.andWhere('category.name IN (:...categories)', { 
         categories: clienteBehavior.preferredCategories 
       });
     }
-
+  
     // Filtrar por rango de precio preferido del cliente
     if (clienteBehavior.pricePreference !== 'budget') {
       const priceFilter = this.getPriceRangeForPreference(clienteBehavior.pricePreference);
       query.andWhere('variedad.price BETWEEN :minPrice AND :maxPrice', priceFilter);
     }
-
+  
     this.applyContextFilters(query, context, 'producto');
-
+  
     const productos = await query
       .limit(limit * 2)
       .getMany();
-
+  
     // Usar IA para rankear recomendaciones personalizadas
     const recommendations = await this.rankPersonalizedRecommendations(
       productos, 
       clienteBehavior, 
       limit
     );
-
+  
     return {
       totalProducts: recommendations.length,
       categoriesAnalyzed: await this.countCategories(tenantId, context),
@@ -213,34 +213,34 @@ export class RecommendationsService {
       where: { id: productId, tenantId },
       relations: ['category', 'productoVariedad', 'productoVariedad.size']
     });
-
+  
     if (!baseProduct) {
       throw new NotFoundException('Producto base no encontrado');
     }
-
+  
     // Buscar productos similares
     const query = this.productoRepository
       .createQueryBuilder('producto')
       .leftJoinAndSelect('producto.category', 'category')
-      .leftJoinAndSelect('producto.productoVariedad', 'variedad')
+      .leftJoinAndSelect('producto.productoVariedad', 'variedad') // alias para product_sizes
       .leftJoinAndSelect('variedad.size', 'size')
       .leftJoinAndSelect('producto.images', 'images')
       .where('producto.tenantId = :tenantId', { tenantId })
       .andWhere('producto.isActive = true')
       .andWhere('producto.id != :baseProductId', { baseProductId: productId });
-
+  
     // Priorizar misma categoría
-    query.andWhere('producto.categoryId = :categoryId', { 
+    query.andWhere('producto.category_id = :categoryId', { 
       categoryId: baseProduct.category.id 
     });
-
+  
     // Priorizar misma subcategoría
     if (baseProduct.subcategory) {
       query.andWhere('producto.subcategory = :subcategory', { 
         subcategory: baseProduct.subcategory 
       });
     }
-
+  
     // Rango de precio similar (+/- 30%)
     const avgPrice = baseProduct.productoVariedad.reduce((sum, v) => sum + v.price, 0) / baseProduct.productoVariedad.length;
     const priceMargin = avgPrice * 0.3;
@@ -248,19 +248,19 @@ export class RecommendationsService {
       minPrice: avgPrice - priceMargin,
       maxPrice: avgPrice + priceMargin
     });
-
+  
+    // Aplicar filtros adicionales
     this.applyContextFilters(query, context, 'producto');
-
+  
     const productos = await query
       .limit(limit * 2)
       .getMany();
-
-    // Usar IA para análisis de similitud
+  
     const recommendations = await this.rankSimilarProducts(baseProduct, productos, limit);
-
+  
     return {
       totalProducts: recommendations.length,
-      categoriesAnalyzed: 1, // Solo una categoría
+      categoriesAnalyzed: 1,
       salesDataPoints: productos.length,
       analysisDate: new Date(),
       recommendations,
@@ -273,33 +273,29 @@ export class RecommendationsService {
     context: RecommendationContext, 
     limit: number
   ): Promise<RecommendationAnalysis> {
-    // Productos creados en los últimos 30 días
-    const fechaInicio = new Date();
-    fechaInicio.setDate(fechaInicio.getDate() - 30);
-
     const query = this.productoRepository
       .createQueryBuilder('producto')
       .leftJoinAndSelect('producto.category', 'category')
-      .leftJoinAndSelect('producto.productoVariedad', 'variedad')
+      .leftJoinAndSelect('producto.productoVariedad', 'variedad') // variedad es alias para product_sizes
       .leftJoinAndSelect('variedad.size', 'size')
       .leftJoinAndSelect('producto.images', 'images')
       .where('producto.tenantId = :tenantId', { tenantId })
       .andWhere('producto.isActive = true');
-      // .andWhere('producto.createdAt >= :fechaInicio', { fechaInicio }); // Descomenta si tienes campo createdAt
-
+  
+    // Ahora SÍ podemos aplicar todos los filtros porque tenemos el JOIN
     this.applyContextFilters(query, context, 'producto');
-
+  
     const productos = await query
-      .orderBy('producto.id', 'DESC') // Más recientes primero
+      .orderBy('producto.id', 'DESC')
       .limit(limit)
       .getMany();
-
+  
     const recommendations = await this.convertProductsToRecommendations(
       productos, 
       'new_arrivals',
       'Producto recién agregado'
     );
-
+  
     return {
       totalProducts: recommendations.length,
       categoriesAnalyzed: await this.countCategories(tenantId, context),
@@ -322,15 +318,16 @@ export class RecommendationsService {
     if (productIds.length === 0) {
       return [];
     }
-
+  
+    // Usar el nombre correcto de la tabla y columna
     const productos = await this.productoVariedadRepository.find({
       where: { 
-        Id: In(productIds),
+        Id: In(productIds), // Nota: usa "Id" con mayúscula según tu entidad
         tenantId 
       },
       relations: ['producto', 'producto.category', 'producto.images', 'size']
     });
-
+  
     return productos.slice(0, limit).map((variedad, index) => {
       const salesInfo = salesData.find(s => s.productoVariedadId === variedad.Id);
       const score = Math.max(0.1, Math.min(1, (salesData.length - index) / salesData.length));
@@ -733,25 +730,37 @@ export class RecommendationsService {
   // Métodos auxiliares
   private applyContextFilters(query: any, context: RecommendationContext, alias: string = 'producto'): void {
     if (context.categoryId) {
-      query.andWhere(`${alias}.categoryId = :categoryId`, { categoryId: context.categoryId });
+      query.andWhere(`${alias}.category_id = :categoryId`, { categoryId: context.categoryId });
     }
+    
     if (context.subcategory) {
       query.andWhere(`${alias}.subcategory = :subcategory`, { subcategory: context.subcategory });
     }
+    
     if (context.priceRange) {
-      if (alias === 'variedad') {
+      if (alias === 'product_sizes' || alias === 'variedad') {
         query.andWhere(`${alias}.price BETWEEN :minPrice AND :maxPrice`, context.priceRange);
       } else {
-        query.andWhere('variedad.price BETWEEN :minPrice AND :maxPrice', context.priceRange);
+        // Solo aplicar si hay JOIN con product_sizes (usando alias variedad)
+        const queryString = query.getSql();
+        if (queryString.includes('product_sizes') || queryString.includes('"variedad"')) {
+          query.andWhere('variedad.price BETWEEN :minPrice AND :maxPrice', context.priceRange);
+        }
       }
     }
+    
     if (!context.includeOutOfStock) {
-      if (alias === 'variedad') {
+      if (alias === 'product_sizes' || alias === 'variedad') {
         query.andWhere(`${alias}.quantity > 0`);
       } else {
-        query.andWhere('variedad.quantity > 0');
+        // Solo aplicar si hay JOIN con product_sizes
+        const queryString = query.getSql();
+        if (queryString.includes('product_sizes') || queryString.includes('"variedad"')) {
+          query.andWhere('variedad.quantity > 0');
+        }
       }
     }
+    
     if (context.excludeProductIds?.length) {
       query.andWhere(`${alias}.id NOT IN (:...excludeIds)`, { excludeIds: context.excludeProductIds });
     }
@@ -760,11 +769,24 @@ export class RecommendationsService {
   private async countCategories(tenantId: string, context: RecommendationContext): Promise<number> {
     const query = this.productoRepository
       .createQueryBuilder('producto')
-      .select('COUNT(DISTINCT producto.categoryId)', 'count')
+      .select('COUNT(DISTINCT producto.category_id)', 'count')
       .where('producto.tenantId = :tenantId', { tenantId })
       .andWhere('producto.isActive = true');
-
-    this.applyContextFilters(query, context);
+  
+    // Solo aplicar filtros que NO requieren product_sizes
+    if (context.categoryId) {
+      query.andWhere('producto.category_id = :categoryId', { categoryId: context.categoryId });
+    }
+    
+    if (context.subcategory) {
+      query.andWhere('producto.subcategory = :subcategory', { subcategory: context.subcategory });
+    }
+    
+    if (context.excludeProductIds?.length) {
+      query.andWhere('producto.id NOT IN (:...excludeIds)', { excludeIds: context.excludeProductIds });
+    }
+    
+    // NO aplicar filtros de precio o stock porque no tenemos product_sizes
     
     const result = await query.getRawOne();
     return parseInt(result.count) || 0;

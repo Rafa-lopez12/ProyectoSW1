@@ -29,6 +29,14 @@ export class ProductoController {
     return this.productoService.findAll(tenantId, filters);
   }
 
+  @Get('variedades')
+  @TenantFuncionalidadAuth('obtener-productos')
+  findAllVarieties(
+    @GetTenantId() tenantId: string
+  ) {
+    return this.productoService.findAllProductVarieties(tenantId);
+  }
+
   @Get(':id')
   @TenantFuncionalidadAuth('obtener-producto')
   findOne(

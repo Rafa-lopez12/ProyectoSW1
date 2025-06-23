@@ -124,6 +124,44 @@ export class ProductoService extends TenantBaseService<Producto> {
     return queryBuilder.getMany();
   }
 
+
+  async findAllProductVarieties(tenantId: string) {
+    try {
+      const productVarieties = await this.productSizeRepository.find({
+        where: { tenantId },
+        relations: [
+          'producto',
+          'size'
+        ],
+        select: {
+          Id: true,
+          color: true,
+          price: true,
+          producto: {
+            id: true,
+            name: true
+          },
+          size: {
+            id: true,
+            name: true
+          }
+        }
+      });
+  
+      return productVarieties.map(variety => ({
+        id: variety.Id,
+        productoNombre: variety.producto.name,
+        tallaNombre: variety.size.name,
+        color: variety.color,
+        precio: variety.price,
+        productoId: variety.producto.id,
+        tallaId: variety.size.id
+      }));
+    } catch (error) {
+      this.handleDBExceptions(error);
+    }
+  }
+
   async findOne(tenantId: string, id: string) {
     const product = await this.productRepository.findOne({
       where: { id, tenantId },
