@@ -8,16 +8,20 @@ crear el .env
 
 DB_PASSWORD=
 DB_NAME=
-DB_HOST=localhost
+DB_HOST=
 DB_PORT=5432
 DB_USER=
 PORT=3000
 HOST_API=http://localhost:3000/api
-JWT_SECRET=
-JWR_SECRET_CLIENTE=
+JWT_SECRET=Est3EsMISE3Dsecreto32s
+JWR_SECRET_CLIENTE=Cliente123Sec2t
 OPENAI_API_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_PUBLISHABLE_KEY=
+FRONTEND_URL=http://localhost:
+REPLICATE_API_TOKEN=
+UPLOAD_DIR=
+BASE_URL=
 
 
 # 3
@@ -57,7 +61,6 @@ src/
 # 5
 crear un  tenant
 
-insert into tenant(nombre,subdominio,plan) values('Mi tienda', 'mitienda', 'basic')
 
 POST /api/tenant  //algo falla creo xd
 Content-Type: application/json

@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsUUID, IsUrl } from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsUrl, IsEnum } from 'class-validator';
+
+export enum GarmentCategory {
+  UPPER_BODY = 'upper_body',
+  LOWER_BODY = 'lower_body',
+  DRESSES = 'dresses'
+}
 
 export class CreateTryonDto {
   @IsString()
@@ -12,6 +18,10 @@ export class CreateTryonDto {
   @IsOptional()
   @IsUUID()
   productoId?: string;
+
+  @IsOptional()
+  @IsEnum(GarmentCategory)
+  category?: GarmentCategory;
 
   @IsOptional()
   metadata?: any;
@@ -30,4 +40,9 @@ export class CreateTryonFromBase64Dto {
 
   @IsOptional()
   metadata?: any;
+}
+
+export class CreateTryonWithCategoryDto extends CreateTryonFromBase64Dto {
+  @IsEnum(GarmentCategory)
+  category: GarmentCategory;
 }

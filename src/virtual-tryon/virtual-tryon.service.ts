@@ -1,3 +1,4 @@
+// src/virtual-tryon/virtual-tryon.service.ts - VERSIÓN CON CATEGORY SUPPORT
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -38,6 +39,56 @@ export class VirtualTryonService {
     });
   }
 
+  private detectGarmentCategory(metadata?: any, productData?: any): string {
+    // 1. Si hay metadata con categoría explícita
+    if (metadata?.category) {
+      const category = metadata.category.toLowerCase();
+      if (['upper_body', 'lower_body', 'dresses'].includes(category)) {
+        return category;
+      }
+    }
+
+    // 2. Si hay información del producto
+    if (productData?.categoria || productData?.category) {
+      const categoria = (productData.categoria || productData.category).toLowerCase();
+      
+      // Mapear categorías comunes a categorías IDM-VTON
+      if (categoria.includes('camisa') || categoria.includes('polera') || 
+          categoria.includes('blusa') || categoria.includes('top') ||
+          categoria.includes('shirt') || categoria.includes('t-shirt')) {
+        return 'upper_body';
+      }
+      
+      if (categoria.includes('pantalon') || categoria.includes('jean') || 
+          categoria.includes('short') || categoria.includes('pants') ||
+          categoria.includes('jeans') || categoria.includes('trouser')) {
+        return 'lower_body';
+      }
+      
+      if (categoria.includes('vestido') || categoria.includes('dress')) {
+        return 'dresses';
+      }
+    }
+
+    // 3. Análisis por nombre de archivo o URL (básico)
+    if (metadata?.garmentImageUrl || metadata?.fileName) {
+      const imagePath = (metadata.garmentImageUrl || metadata.fileName || '').toLowerCase();
+      
+      if (imagePath.includes('jean') || imagePath.includes('pantalon') || 
+          imagePath.includes('pants') || imagePath.includes('trouser')) {
+        return 'lower_body';
+      }
+      
+      if (imagePath.includes('vestido') || imagePath.includes('dress')) {
+        return 'dresses';
+      }
+    }
+
+    // 4. Default: upper_body (más común)
+    this.logger.warn('No se pudo detectar categoría de prenda, usando upper_body por defecto');
+    return 'upper_body';
+  }
+
   async createTryonFromUrls(
     tenantId: string, 
     clienteId: string, 
@@ -65,7 +116,10 @@ export class VirtualTryonService {
         }
       }
 
-      // Crear sesión
+      // 🔥 DETECTAR CATEGORÍA DE PRENDA
+      const detectedCategory = this.detectGarmentCategory(metadata, producto);
+      
+      // Crear sesión con categoría detectada
       const session = this.tryonSessionRepository.create({
         userImageUrl,
         garmentImageUrl,
@@ -73,7 +127,10 @@ export class VirtualTryonService {
         producto: producto || undefined,
         tenantId,
         status: 'pending',
-        metadata
+        metadata: {
+          ...metadata,
+          detectedCategory, // Guardar categoría detectada
+        }
       });
 
       const savedSession = await this.tryonSessionRepository.save(session);
@@ -134,8 +191,11 @@ export class VirtualTryonService {
         const garmentImagePath = await this.saveBase64Image(garmentImageBase64, uploadDir, 'garment');
         garmentImageUrl = `${baseUrl}/uploads/${path.basename(garmentImagePath)}`;
       }
+
+      // 🔥 DETECTAR CATEGORÍA DE PRENDA
+      const detectedCategory = this.detectGarmentCategory(metadata, producto);
   
-      // Crear sesión
+      // Crear sesión con categoría detectada
       const session = this.tryonSessionRepository.create({
         userImageUrl,
         garmentImageUrl,
@@ -143,12 +203,15 @@ export class VirtualTryonService {
         producto: producto || undefined,
         tenantId,
         status: 'pending',
-        metadata
+        metadata: {
+          ...metadata,
+          detectedCategory, // Guardar categoría detectada
+          garmentImageUrl, // Para análisis posterior
+        }
       });
   
       const savedSession = await this.tryonSessionRepository.save(session);
   
-     
       this.processVirtualTryon(savedSession.id);
   
       return savedSession;
@@ -182,6 +245,7 @@ export class VirtualTryonService {
     return filePath;
   }
 
+  // 🔥 MÉTODO PRINCIPAL CORREGIDO CON CATEGORY
   private async processVirtualTryon(sessionId: string): Promise<void> {
     try {
       this.logger.log(`Iniciando procesamiento de try-on para sesión ${sessionId}`);
@@ -191,14 +255,20 @@ export class VirtualTryonService {
       });
   
       const session = await this.tryonSessionRepository.findOne({
-        where: { id: sessionId }
+        where: { id: sessionId },
+        relations: ['producto']
       });
   
       if (!session) {
         throw new Error('Sesión no encontrada');
       }
+
+      // 🔥 OBTENER CATEGORÍA DE LA SESIÓN
+      const garmentCategory = session.metadata?.detectedCategory || 'upper_body';
+      
+      this.logger.log(`🏷️ Categoría detectada para try-on: ${garmentCategory}`);
   
-      // MÉTODO CORREGIDO para manejar streams
+      // MÉTODO CORREGIDO para manejar streams CON CATEGORY
       try {
         const output = await this.replicate.run(
           "cuuupid/idm-vton:906425dbca90663ff5427624839572cc56ea7d380343d13e2a4c4b09d3f0c30f",
@@ -206,7 +276,9 @@ export class VirtualTryonService {
             input: {
               human_img: session.userImageUrl,
               garm_img: session.garmentImageUrl,
-              garment_des: "high quality garment"
+              // 🔥 AGREGAR CATEGORY OBLIGATORIO
+              category: garmentCategory,
+              garment_des: this.generateGarmentDescription(garmentCategory, session.producto)
             }
           }
         );
@@ -278,13 +350,15 @@ export class VirtualTryonService {
       } catch (replicateError) {
         this.logger.error('Error con Replicate:', replicateError);
         
-        // Fallback: usar predictions.create
+        // Fallback: usar predictions.create CON CATEGORY
         const prediction = await this.replicate.predictions.create({
           version: "906425dbca90663ff5427624839572cc56ea7d380343d13e2a4c4b09d3f0c30f",
           input: {
             human_img: session.userImageUrl,
             garm_img: session.garmentImageUrl,
-            garment_des: "high quality garment"
+            // 🔥 AGREGAR CATEGORY EN FALLBACK TAMBIÉN
+            category: garmentCategory,
+            garment_des: this.generateGarmentDescription(garmentCategory, session.producto)
           }
         });
   
@@ -304,6 +378,32 @@ export class VirtualTryonService {
         errorMessage: error.message
       });
     }
+  }
+
+  // 🔥 NUEVO MÉTODO HELPER PARA GENERAR DESCRIPCIÓN
+  private generateGarmentDescription(category: string, producto?: any): string {
+    const baseDescriptions = {
+      'upper_body': 'high quality shirt, comfortable fit, modern style',
+      'lower_body': 'high quality pants, perfect fit, comfortable fabric',
+      'dresses': 'elegant dress, beautiful design, perfect fit'
+    };
+
+    let description = baseDescriptions[category] || baseDescriptions['upper_body'];
+
+    // Agregar información del producto si está disponible
+    if (producto) {
+      if (producto.nombre) {
+        description = `${producto.nombre}, ${description}`;
+      }
+      if (producto.color) {
+        description += `, ${producto.color} color`;
+      }
+      if (producto.material) {
+        description += `, ${producto.material} material`;
+      }
+    }
+
+    return description;
   }
 
   // Método helper para manejar errores de forma segura
@@ -425,7 +525,6 @@ export class VirtualTryonService {
     return this.getSessionStatus(tenantId, clienteId, sessionId);
   }
 
-
   async verifyReplicateAccount(): Promise<any> {
     try {
       this.logger.log('🔍 Verificando estado de cuenta Replicate...');
@@ -478,6 +577,4 @@ export class VirtualTryonService {
       };
     }
   }
-
-
 }
