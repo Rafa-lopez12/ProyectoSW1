@@ -24,6 +24,8 @@ import { VirtualTryonModule } from './virtual-tryon/virtual-tryon.module';
 import { RecommendationsModule } from './recommendation/recommendation.module';
 import { ReportesModule } from './reportes/reportes.module';
 
+
+
 @Module({
   imports: [
     DiagramWsModule,
@@ -36,22 +38,9 @@ import { ReportesModule } from './reportes/reportes.module';
       port: 5432,
       database: process.env.DB_NAME,
       username: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
+      password: process.env.DB_PASSWORD,      
       autoLoadEntities: true,
       synchronize: true,
-      ssl: {
-        rejectUnauthorized: false
-      },
-      // Configuraciones adicionales para conexiones remotas
-      extra: {
-        ssl: true,
-        connectionTimeoutMillis: 30000,
-        idleTimeoutMillis: 30000,
-        query_timeout: 30000,
-      },
-
-      // Configuración de conexión mejorada
-      maxQueryExecutionTime: 30000,
     }),
     TypeOrmModule.forFeature([Tenant]),
     ServeStaticModule.forRoot({
@@ -74,8 +63,10 @@ import { ReportesModule } from './reportes/reportes.module';
     VirtualTryonModule,
     RecommendationsModule,
     ReportesModule,
+    
   ],
   providers: [],
+
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
